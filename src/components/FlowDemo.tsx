@@ -34,34 +34,38 @@ const FlowDemo = () => {
                 
                 {/* Visual flow representation */}
                 <div className="grid md:grid-cols-3 gap-8 w-full mt-12">
-                  <div className="flex flex-col items-center">
+                  <div className="flex flex-col items-center text-center min-h-[200px]">
                     <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
                       <MessageCircle className="w-6 h-6 text-green-600" />
                     </div>
-                    <h4 className="font-semibold mb-2">Customer Message</h4>
-                    <p className="text-sm text-muted-foreground text-center">
+                    <h4 className="font-semibold mb-3">Customer Message</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       "What are your business hours?"
                     </p>
                   </div>
                   
-                  <div className="flex flex-col items-center">
-                    <ArrowDown className="w-6 h-6 text-muted-foreground mb-4 hidden md:block" />
+                  <div className="flex flex-col items-center text-center min-h-[200px] relative">
+                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
+                      <ArrowDown className="w-6 h-6 text-muted-foreground hidden md:block" />
+                    </div>
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
                       <Bot className="w-6 h-6 text-blue-600" />
                     </div>
-                    <h4 className="font-semibold mb-2">AI Processing</h4>
-                    <p className="text-sm text-muted-foreground text-center">
+                    <h4 className="font-semibold mb-3">AI Processing</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       Bot analyzes intent and retrieves information
                     </p>
                   </div>
                   
-                  <div className="flex flex-col items-center">
-                    <ArrowDown className="w-6 h-6 text-muted-foreground mb-4 hidden md:block" />
+                  <div className="flex flex-col items-center text-center min-h-[200px] relative">
+                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
+                      <ArrowDown className="w-6 h-6 text-muted-foreground hidden md:block" />
+                    </div>
                     <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
                       <MessageCircle className="w-6 h-6 text-purple-600" />
                     </div>
-                    <h4 className="font-semibold mb-2">Smart Response</h4>
-                    <p className="text-sm text-muted-foreground text-center">
+                    <h4 className="font-semibold mb-3">Smart Response</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       "We're open Mon-Fri 9AM-6PM, Sat 10AM-4PM. How can I help you today?"
                     </p>
                   </div>
