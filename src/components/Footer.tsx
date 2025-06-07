@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Separator } from '@/components/ui/separator';
 import { MessageCircle, Mail, Twitter, Linkedin, Github } from 'lucide-react';
@@ -13,15 +14,10 @@ const Footer = () => {
       ]
     },
     {
-      title: "Resources",
+      title: "Support",
       links: [
         { name: "Help Center", href: "#help" },
-        { name: "Tutorials", href: "#tutorials" }
-      ]
-    },
-    {
-      title: "Company",
-      links: [
+        { name: "Tutorials", href: "#tutorials" },
         { name: "Contact", href: "#contact" }
       ]
     },
@@ -36,8 +32,8 @@ const Footer = () => {
 
   return (
     <footer className="bg-background border-t">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid lg:grid-cols-5 gap-8">
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-4 gap-8">
           {/* Brand section */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
@@ -88,13 +84,10 @@ const Footer = () => {
         
         <Separator className="my-8" />
         
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-center items-center">
           <p className="text-muted-foreground text-sm">
             © 2024 BotBuilder. All rights reserved.
           </p>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <span>Made with ❤️ for businesses worldwide</span>
-          </div>
         </div>
       </div>
     </footer>
