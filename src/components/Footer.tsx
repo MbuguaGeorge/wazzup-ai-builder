@@ -10,8 +10,7 @@ const Footer = () => {
       links: [
         { name: "Features", href: "#features" },
         { name: "Pricing", href: "#pricing" },
-        { name: "Integrations", href: "#integrations" },
-        { name: "API Documentation", href: "#api" }
+        { name: "Integrations", href: "#integrations" }
       ]
     },
     {
@@ -19,8 +18,7 @@ const Footer = () => {
       links: [
         { name: "Help Center", href: "#help" },
         { name: "Tutorials", href: "#tutorials" },
-        { name: "Blog", href: "#blog" },
-        { name: "Community", href: "#community" }
+        { name: "Blog", href: "#blog" }
       ]
     },
     {
@@ -28,8 +26,7 @@ const Footer = () => {
       links: [
         { name: "About Us", href: "#about" },
         { name: "Careers", href: "#careers" },
-        { name: "Contact", href: "#contact" },
-        { name: "Press Kit", href: "#press" }
+        { name: "Contact", href: "#contact" }
       ]
     },
     {
@@ -37,15 +34,14 @@ const Footer = () => {
       links: [
         { name: "Privacy Policy", href: "#privacy" },
         { name: "Terms of Service", href: "#terms" },
-        { name: "Cookie Policy", href: "#cookies" },
-        { name: "GDPR", href: "#gdpr" }
+        { name: "Cookie Policy", href: "#cookies" }
       ]
     }
   ];
 
   return (
     <footer className="bg-background border-t">
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-12">
         <div className="grid lg:grid-cols-5 gap-8">
           {/* Brand section */}
           <div className="lg:col-span-1">
