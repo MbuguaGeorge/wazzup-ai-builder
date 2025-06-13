@@ -1,9 +1,11 @@
-
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, MessageCircle, Zap } from 'lucide-react';
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-background via-background to-secondary/20 pt-20 pb-16">
       <div className="container mx-auto px-4">
@@ -23,7 +25,7 @@ const Hero = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Button size="lg" className="group min-w-[200px]">
+            <Button size="lg" className="group min-w-[200px]" onClick={() => navigate('/signup')}>
               Start Building Free
               <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Button>
