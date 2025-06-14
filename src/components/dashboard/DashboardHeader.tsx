@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, Settings, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface DashboardHeaderProps {
   title: string;
@@ -22,6 +23,13 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
     name: 'John Doe',
     email: 'john@example.com',
     avatarUrl: '',
+  };
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/');
   };
 
   return (
@@ -71,7 +79,7 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive">
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>

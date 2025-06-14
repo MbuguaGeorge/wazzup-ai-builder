@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
@@ -16,6 +16,9 @@ import BotCard from '@/components/dashboard/BotCard';
 import CreateBotCard from '@/components/dashboard/CreateBotCard';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import { authFetch } from '@/lib/authFetch';
+
+const API_BASE_URL = 'http://localhost:8000';
 
 interface Flow {
   id: string;
@@ -34,53 +37,6 @@ interface Bot {
   flows: Flow[];
 }
 
-// Temporary mock data
-const mockBots: Bot[] = [
-  {
-    id: '1',
-    name: 'Customer Support Bot',
-    createdAt: '2024-03-15',
-    status: 'active',
-    lastModified: '2024-03-20',
-    isConnected: true,
-    activeFlow: {
-      id: 'flow-1',
-      name: 'Daytime Support'
-    },
-    flows: [
-      { id: 'flow-1', name: 'Daytime Support', status: 'active' },
-      { id: 'flow-2', name: 'Night Support', status: 'draft' },
-      { id: 'flow-3', name: 'Weekend Flow', status: 'archived' },
-    ]
-  },
-  {
-    id: '2',
-    name: 'Sales Assistant',
-    createdAt: '2024-03-10',
-    status: 'draft',
-    lastModified: '2024-03-18',
-    isConnected: false,
-    activeFlow: {
-      id: 'flow-2',
-      name: 'Main Sales Flow'
-    },
-    flows: [
-      { id: 'flow-2', name: 'Main Sales Flow', status: 'active' },
-      { id: 'flow-4', name: 'Holiday Sales', status: 'draft' },
-    ]
-  },
-  {
-    id: '3',
-    name: 'Order Bot',
-    createdAt: '2024-03-05',
-    status: 'disconnected',
-    lastModified: '2024-03-15',
-    isConnected: false,
-    activeFlow: null,
-    flows: []
-  },
-];
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -88,73 +44,80 @@ const Dashboard = () => {
   const [newBotName, setNewBotName] = useState('');
   const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [bots, setBots] = useState<Bot[]>(mockBots);
+  const [bots, setBots] = useState<Bot[]>([]);
   const [botNameError, setBotNameError] = useState('');
+
+  // Fetch bots on mount
+  useEffect(() => {
+    async function fetchBots() {
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/`); // Adjust endpoint to /api/ or /api/bots/ as needed
+        if (response.ok) {
+          const data = await response.json();
+          setBots(data);
+        }
+      } catch (err) {
+        // Handle error (already handled by authFetch for 401)
+      }
+    }
+    fetchBots();
+  }, []);
 
   const validateBotName = (name: string) => {
     if (!name.trim()) {
       setBotNameError('Bot name is required');
       return false;
     }
-    
     const existingBot = bots.find(
       (bot) => bot.name.toLowerCase() === name.toLowerCase()
     );
-    
     if (existingBot) {
       setBotNameError('A bot with this name already exists');
       return false;
     }
-    
     setBotNameError('');
     return true;
   };
 
-  const handleCreateBot = () => {
+  const handleCreateBot = async () => {
     if (!validateBotName(newBotName)) return;
-
-    const newBot: Bot = {
-      id: `bot-${Date.now()}`,
-      name: newBotName,
-      createdAt: new Date().toISOString(),
-      status: 'draft',
-      lastModified: new Date().toISOString(),
-      isConnected: false,
-      activeFlow: null,
-      flows: []
-    };
-
-    setBots([...bots, newBot]);
-    setNewBotName('');
-    setIsCreateDialogOpen(false);
-    navigate(`/flow-builder/${newBot.id}`);
+    try {
+      const response = await authFetch(`${API_BASE_URL}/api/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newBotName }),
+      });
+      if (response.ok) {
+        const newBot = await response.json();
+        setBots([...bots, newBot]);
+        setNewBotName('');
+        setIsCreateDialogOpen(false);
+        navigate(`/flow-builder/${newBot.id}`);
+      }
+    } catch (err) {}
   };
 
-  const handleDeleteBot = (id: string) => {
-    setBots(bots.filter(bot => bot.id !== id));
+  const handleDeleteBot = async (id: string) => {
+    try {
+      const response = await authFetch(`${API_BASE_URL}/api/${id}/`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setBots(bots.filter(bot => bot.id !== id));
+      }
+    } catch (err) {}
   };
 
-  const handleDuplicateBot = (id: string) => {
-    const botToDuplicate = bots.find(bot => bot.id === id);
-    if (!botToDuplicate) return;
-
-    const newBot: Bot = {
-      ...botToDuplicate,
-      id: `bot-${Date.now()}`,
-      name: `${botToDuplicate.name} (Copy)`,
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-      status: 'draft',
-      isConnected: false,
-      activeFlow: null,
-      flows: botToDuplicate.flows.map(flow => ({
-        ...flow,
-        id: `flow-${Date.now()}-${flow.id}`,
-        status: 'draft'
-      }))
-    };
-
-    setBots([...bots, newBot]);
+  const handleDuplicateBot = async (id: string) => {
+    try {
+      const response = await authFetch(`${API_BASE_URL}/api/${id}/duplicate/`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const newBot = await response.json();
+        setBots([...bots, newBot]);
+      }
+    } catch (err) {}
   };
 
   const handleRenameBot = (id: string, currentName: string) => {
@@ -164,44 +127,41 @@ const Dashboard = () => {
     setIsRenameDialogOpen(true);
   };
 
-  const handleRenameConfirm = () => {
+  const handleRenameConfirm = async () => {
     if (!selectedBotId || !validateBotName(newBotName)) return;
-
-    setBots(bots.map(bot => 
-      bot.id === selectedBotId 
-        ? { ...bot, name: newBotName, lastModified: new Date().toISOString() }
-        : bot
-    ));
-
-    setIsRenameDialogOpen(false);
-    setNewBotName('');
-    setSelectedBotId(null);
-    setBotNameError('');
+    try {
+      const response = await authFetch(`${API_BASE_URL}/api/${selectedBotId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newBotName }),
+      });
+      if (response.ok) {
+        const updatedBot = await response.json();
+        setBots(bots.map(bot => bot.id === selectedBotId ? updatedBot : bot));
+        setIsRenameDialogOpen(false);
+        setNewBotName('');
+        setSelectedBotId(null);
+        setBotNameError('');
+      }
+    } catch (err) {}
   };
 
   const handleManageFlows = (botId: string) => {
     navigate(`/flow-builder/${botId}`);
   };
 
-  const handleSetActiveFlow = (botId: string, flowId: string) => {
-    setBots(bots.map(bot => {
-      if (bot.id !== botId) return bot;
-
-      const selectedFlow = bot.flows.find(f => f.id === flowId);
-      if (!selectedFlow) return bot;
-
-      return {
-        ...bot,
-        activeFlow: flowId ? {
-          id: flowId,
-          name: selectedFlow.name
-        } : null,
-        flows: bot.flows.map(flow => ({
-          ...flow,
-          status: flow.id === flowId ? 'active' : flow.status === 'active' ? 'draft' : flow.status
-        }))
-      };
-    }));
+  const handleSetActiveFlow = async (botId: string, flowId: string) => {
+    try {
+      const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/set-active-flow/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flow_id: flowId }),
+      });
+      if (response.ok) {
+        const updatedBot = await response.json();
+        setBots(bots.map(bot => bot.id === botId ? updatedBot : bot));
+      }
+    } catch (err) {}
   };
 
   const filteredBots = bots.filter(bot =>

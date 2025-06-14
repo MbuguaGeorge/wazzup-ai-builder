@@ -50,6 +50,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useParams } from 'react-router-dom';
+import { authFetch } from '@/lib/authFetch';
 
 const nodeTypes = {
   messageNode: MessageNode,
@@ -61,14 +63,10 @@ const nodeTypes = {
   sheetNode: SheetNode,
 };
 
-// Mock data - replace with API calls
-const mockFlows = [
-  { id: '1', name: 'Daytime Support', status: 'active', isActive: true },
-  { id: '2', name: 'Night Support', status: 'draft', isActive: false },
-  { id: '3', name: 'Weekend Flow', status: 'archived', isActive: false },
-];
+const API_BASE_URL = 'http://localhost:8000';
 
 const FlowBuilder = () => {
+  const { botId } = useParams<{ botId: string }>();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -78,14 +76,30 @@ const FlowBuilder = () => {
     nodes: [],
     edges: [],
   });
-  const [flows, setFlows] = useState(mockFlows);
-  const [selectedFlow, setSelectedFlow] = useState(flows[0]);
+  const [flows, setFlows] = useState<any[]>([]);
+  const [selectedFlow, setSelectedFlow] = useState<any | null>(null);
   const [flowFilter, setFlowFilter] = useState('all');
   const [isCreateFlowDialogOpen, setIsCreateFlowDialogOpen] = useState(false);
   const [newFlowName, setNewFlowName] = useState('');
   const [flowNameError, setFlowNameError] = useState('');
 
-  const filteredFlows = flows.filter(flow => {
+  // Fetch flows for the bot on mount
+  useEffect(() => {
+    async function fetchFlows() {
+      if (!botId) return;
+      try {
+        const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
+        if (response.ok) {
+          const data = await response.json();
+          setFlows(data);
+          if (data.length > 0) setSelectedFlow(data[0]);
+        }
+      } catch (err) {}
+    }
+    fetchFlows();
+  }, [botId]);
+
+  const filteredFlows = flows.filter((flow) => {
     if (flowFilter === 'all') return true;
     return flow.status === flowFilter;
   });
@@ -151,40 +165,49 @@ const FlowBuilder = () => {
       setFlowNameError('Flow name is required');
       return false;
     }
-    
     const existingFlow = flows.find(
-      (flow) => flow.name.toLowerCase() === name.toLowerCase()
+      (flow: any) => flow.name.toLowerCase() === name.toLowerCase()
     );
-    
     if (existingFlow) {
       setFlowNameError('A flow with this name already exists');
       return false;
     }
-    
     setFlowNameError('');
     return true;
   };
 
-  const handleCreateFlow = () => {
-    if (!validateFlowName(newFlowName)) return;
-
-    const newFlow = {
-      id: `flow-${Date.now()}`,
-      name: newFlowName,
-      status: 'draft',
-      isActive: false,
-    };
-    setFlows([...flows, newFlow]);
-    setSelectedFlow(newFlow);
-    setNewFlowName('');
-    setIsCreateFlowDialogOpen(false);
+  const handleCreateFlow = async () => {
+    if (!validateFlowName(newFlowName) || !botId) return;
+    try {
+      const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newFlowName, flow_data: { nodes: [], edges: [] } }),
+      });
+      if (response.ok) {
+        const newFlow = await response.json();
+        setFlows([...flows, newFlow]);
+        setSelectedFlow(newFlow);
+        setNewFlowName('');
+        setIsCreateFlowDialogOpen(false);
+      }
+    } catch (err) {}
   };
 
-  const handleSetActive = (flowId: string) => {
-    setFlows(flows.map(flow => ({
-      ...flow,
-      isActive: flow.id === flowId
-    })));
+  const handleSetActive = async (flowId: string) => {
+    if (!botId) return;
+    try {
+      const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: true }),
+      });
+      if (response.ok) {
+        const updatedFlow = await response.json();
+        setFlows(flows.map((flow: any) => ({ ...flow, is_active: flow.id === flowId })));
+        setSelectedFlow(updatedFlow);
+      }
+    } catch (err) {}
   };
 
   return (
@@ -197,8 +220,8 @@ const FlowBuilder = () => {
             <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
                 <Select
-                  value={selectedFlow.id}
-                  onValueChange={(value) => setSelectedFlow(flows.find(f => f.id === value)!)}
+                  value={selectedFlow?.id}
+                  onValueChange={(value) => setSelectedFlow(flows.find(f => f.id === value))}
                 >
                   <SelectTrigger className="w-[240px]">
                     <SelectValue placeholder="Select a flow" />
@@ -208,7 +231,7 @@ const FlowBuilder = () => {
                       <SelectItem key={flow.id} value={flow.id}>
                         <div className="flex items-center justify-between w-full">
                           <span>{flow.name}</span>
-                          {flow.isActive && (
+                          {flow.is_active && (
                             <Badge variant="secondary" className="ml-2">
                               Active
                             </Badge>
@@ -236,7 +259,7 @@ const FlowBuilder = () => {
               </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {!selectedFlow.isActive && (
+                    {!selectedFlow?.is_active && (
                       <DropdownMenuItem onClick={() => handleSetActive(selectedFlow.id)}>
                         <Check className="w-4 h-4 mr-2" />
                         Set as Active
