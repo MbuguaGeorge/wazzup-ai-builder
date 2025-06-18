@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import Hero from '../components/Hero';
 import Features from '../components/Features';
 import FlowDemo from '../components/FlowDemo';
@@ -9,6 +8,10 @@ import Pricing from '../components/Pricing';
 import Footer from '../components/Footer';
 
 const Index = () => {
+  useEffect(() => {
+    document.title = 'wozza | AI WhatsApp Bots for Your Business';
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <Hero />

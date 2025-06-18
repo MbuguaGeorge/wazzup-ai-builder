@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, MessageCircle, Zap } from 'lucide-react';
+import logo from '@/images/wozza.png';
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -15,18 +16,22 @@ const Hero = () => {
             No coding required
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-            Create AI-Powered WhatsApp Bots in Minutes
-          </h1>
+          <div className="flex flex-col items-center mb-6">
+            <div className="flex items-center justify-center gap-1 mb-2">
+              <img src={logo} alt="wozza logo" className="h-20 w-20 rounded-lg bg-primary object-cover" />
+              <span className="text-3xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/5 bg-clip-text text-transparent">wozza</span>
+            </div>
+            <h1 className="text-2xl md:text-4xl font-semibold tracking-tight">Create AI-Powered WhatsApp Bots in Minutes</h1>
+          </div>
           
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
-            Build intelligent WhatsApp automation for your business with our visual, no-code platform. 
+            Build intelligent WhatsApp automation for your business with wozza, our visual, no-code platform. 
             Connect your number, design conversation flows, and let AI handle customer interactions.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Button size="lg" className="group min-w-[200px]" onClick={() => navigate('/signup')}>
-              Start Building Free
+              Start Building Now
               <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Button variant="outline" size="lg" className="min-w-[200px]">
@@ -42,7 +47,7 @@ const Hero = () => {
             <div className="hidden sm:block w-px h-6 bg-border"></div>
             <div>No technical skills needed</div>
             <div className="hidden sm:block w-px h-6 bg-border"></div>
-            <div>Start free, scale as you grow</div>
+            <div>Start now, scale as you grow</div>
           </div>
         </div>
       </div>

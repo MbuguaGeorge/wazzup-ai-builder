@@ -9,8 +9,10 @@ import {
   Settings,
   BarChart,
   FileCode,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import logo from '@/images/wozza.png';
 
 const DashboardSidebar = () => {
   const navItems = [
@@ -30,6 +32,11 @@ const DashboardSidebar = () => {
       href: '/dashboard/billing',
     },
     {
+      title: 'Notifications',
+      icon: Bell,
+      href: '/dashboard/notifications',
+    },
+    {
       title: 'Usage',
       icon: BarChart,
       href: '/dashboard/usage',
@@ -43,12 +50,10 @@ const DashboardSidebar = () => {
 
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-background">
-      <div className="p-6">
-        <div className="flex items-center gap-2 font-semibold">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Bot className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-xl">Wazzup AI</span>
+      <div className="p-5">
+        <div className="flex items-center gap-0 font-semibold">
+          <img src={logo} alt="wozzy logo" className="h-10 w-10 rounded-lg bg-primary object-cover" />
+          <span className="text-xl">wozza</span>
         </div>
       </div>
 

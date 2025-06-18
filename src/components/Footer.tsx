@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Separator } from '@/components/ui/separator';
 import { MessageCircle, Mail, Twitter, Linkedin, Github } from 'lucide-react';
+import logo from '@/images/wozza.png';
 
 const Footer = () => {
   const footerSections = [
@@ -36,11 +36,9 @@ const Footer = () => {
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Brand section */}
           <div className="lg:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold">BotBuilder</span>
+            <div className="flex items-center gap-0 mb-4">
+              <img src={logo} alt="wozzy logo" className="w-10 h-10 rounded-lg bg-primary object-cover" />
+              <span className="text-xl font-bold">wozza</span>
             </div>
             <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
               Create intelligent WhatsApp bots without coding. Automate customer service, 
@@ -86,7 +84,7 @@ const Footer = () => {
         
         <div className="flex flex-col md:flex-row justify-center items-center">
           <p className="text-muted-foreground text-sm">
-            © 2024 BotBuilder. All rights reserved.
+            © 2025 wozza. All rights reserved.
           </p>
         </div>
       </div>

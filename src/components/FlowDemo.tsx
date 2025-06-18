@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ const FlowDemo = () => {
             See it in action
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Watch how easy it is to create intelligent WhatsApp bots with our visual flow builder. 
+            Watch how easy it is to create intelligent WhatsApp bots with wozza's visual flow builder. 
             No technical background required.
           </p>
         </div>

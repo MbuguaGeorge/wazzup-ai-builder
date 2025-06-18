@@ -8,7 +8,8 @@ const Pricing = () => {
   const plans = [
     {
       name: "Starter",
-      price: "Free",
+      price: "$29",
+      period: "/month",
       description: "Perfect for trying out the platform",
       features: [
         "Up to 100 messages/month",
@@ -17,12 +18,12 @@ const Pricing = () => {
         "Email support",
         "Community access"
       ],
-      cta: "Start Free",
+      cta: "Start 7-day trial",
       highlighted: false
     },
     {
       name: "Professional",
-      price: "$29",
+      price: "$79",
       period: "/month",
       description: "Ideal for small businesses and agencies",
       features: [
@@ -34,7 +35,7 @@ const Pricing = () => {
         "Team collaboration (3 users)",
         "Priority support"
       ],
-      cta: "Start 14-day trial",
+      cta: "Start 7-day trial",
       highlighted: true
     },
     {

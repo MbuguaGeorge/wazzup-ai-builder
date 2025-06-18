@@ -11,16 +11,19 @@ interface NodeTypeProps {
   type: string;
 }
 
-const NodeType = ({ icon, label, description, type }: NodeTypeProps) => {
+interface SidebarProps { canEdit: boolean; }
+
+const NodeType = ({ icon, label, description, type, canEdit }: NodeTypeProps & { canEdit: boolean }) => {
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
+    if (!canEdit) return;
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
   };
 
   return (
     <Card
-      className="p-4 cursor-move hover:bg-accent transition-colors"
-      draggable
+      className={`p-4 ${canEdit ? 'cursor-move hover:bg-accent' : 'cursor-not-allowed opacity-50'} transition-colors`}
+      draggable={canEdit}
       onDragStart={(event) => onDragStart(event, type)}
     >
       <div className="flex items-start gap-3">
@@ -87,14 +90,14 @@ const nodeTypes = {
   ]
 };
 
-const Sidebar = () => {
+const Sidebar = ({ canEdit }: SidebarProps) => {
   return (
     <div className="w-80 border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-full flex-col">
         <div className="border-b px-6 py-4">
           <h2 className="text-lg font-semibold">Flow Builder</h2>
           <p className="text-sm text-muted-foreground">
-            Drag and drop nodes to build your flow
+            {canEdit ? 'Drag and drop nodes to build your flow' : 'Create or select a flow to start building.'}
           </p>
         </div>
         <ScrollArea className="flex-1 px-4">
@@ -104,7 +107,7 @@ const Sidebar = () => {
               <AccordionContent>
                 <div className="space-y-2 p-2">
                   {nodeTypes.messages.map((node) => (
-                    <NodeType key={node.type} {...node} />
+                    <NodeType key={node.type} {...node} canEdit={canEdit} />
                   ))}
                 </div>
               </AccordionContent>
@@ -114,7 +117,7 @@ const Sidebar = () => {
               <AccordionContent>
                 <div className="space-y-2 p-2">
                   {nodeTypes.ai.map((node) => (
-                    <NodeType key={node.type} {...node} />
+                    <NodeType key={node.type} {...node} canEdit={canEdit} />
                   ))}
                 </div>
               </AccordionContent>
@@ -124,7 +127,7 @@ const Sidebar = () => {
               <AccordionContent>
                 <div className="space-y-2 p-2">
                   {nodeTypes.actions.map((node) => (
-                    <NodeType key={node.type} {...node} />
+                    <NodeType key={node.type} {...node} canEdit={canEdit} />
                   ))}
                 </div>
               </AccordionContent>

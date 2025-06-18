@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -27,7 +26,7 @@ const Features = () => {
     {
       icon: <MessageSquare className="w-6 h-6" />,
       title: "WhatsApp Connection",
-      description: "Connect via Twilio or 360dialog to use your own WhatsApp Business number."
+      description: "Connect via WhatsApp Business API to use your own WhatsApp Business number."
     },
     {
       icon: <FileText className="w-6 h-6" />,
@@ -52,7 +51,7 @@ const Features = () => {
     {
       icon: <CreditCard className="w-6 h-6" />,
       title: "Flexible Pricing",
-      description: "Start free and scale with transparent, usage-based pricing via Stripe."
+      description: "Start now and scale with transparent, usage-based pricing via Stripe."
     }
   ];
 
@@ -64,7 +63,7 @@ const Features = () => {
             Everything you need to automate WhatsApp
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            From simple FAQ bots to complex sales agents, our platform provides all the tools 
+            From simple FAQ bots to complex sales agents, wozza provides all the tools 
             you need to create powerful WhatsApp automation.
           </p>
         </div>

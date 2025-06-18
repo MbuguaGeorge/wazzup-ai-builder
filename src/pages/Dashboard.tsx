@@ -51,7 +51,7 @@ const Dashboard = () => {
   useEffect(() => {
     async function fetchBots() {
       try {
-        const response = await authFetch(`${API_BASE_URL}/api/`); // Adjust endpoint to /api/ or /api/bots/ as needed
+        const response = await authFetch(`${API_BASE_URL}/api/bots/`);
         if (response.ok) {
           const data = await response.json();
           setBots(data);
@@ -61,6 +61,10 @@ const Dashboard = () => {
       }
     }
     fetchBots();
+  }, []);
+
+  useEffect(() => {
+    document.title = 'wozza | Dashboard';
   }, []);
 
   const validateBotName = (name: string) => {
@@ -82,7 +86,7 @@ const Dashboard = () => {
   const handleCreateBot = async () => {
     if (!validateBotName(newBotName)) return;
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/`, {
+      const response = await authFetch(`${API_BASE_URL}/api/bots/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newBotName }),
@@ -99,7 +103,7 @@ const Dashboard = () => {
 
   const handleDeleteBot = async (id: string) => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/${id}/`, {
+      const response = await authFetch(`${API_BASE_URL}/api/bots/${id}/`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -110,7 +114,7 @@ const Dashboard = () => {
 
   const handleDuplicateBot = async (id: string) => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/${id}/duplicate/`, {
+      const response = await authFetch(`${API_BASE_URL}/api/bots/${id}/duplicate/`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -130,7 +134,7 @@ const Dashboard = () => {
   const handleRenameConfirm = async () => {
     if (!selectedBotId || !validateBotName(newBotName)) return;
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/${selectedBotId}/`, {
+      const response = await authFetch(`${API_BASE_URL}/api/bots/${selectedBotId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newBotName }),
@@ -152,10 +156,10 @@ const Dashboard = () => {
 
   const handleSetActiveFlow = async (botId: string, flowId: string) => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/set-active-flow/`, {
-        method: 'POST',
+      const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ flow_id: flowId }),
+        body: JSON.stringify({ is_active: true }),
       });
       if (response.ok) {
         const updatedBot = await response.json();
@@ -175,7 +179,7 @@ const Dashboard = () => {
       <div className="flex-1 flex flex-col">
         <DashboardHeader 
           title="My Bots"
-          subtitle="Create and manage your WhatsApp bots"
+          subtitle="Create and manage your WhatsApp bots with wozza"
         />
 
         <div className="flex-1 overflow-auto">

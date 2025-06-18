@@ -10,7 +10,8 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   ReactFlowInstance,
-  useKeyPress
+  useKeyPress,
+  MarkerType
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -52,6 +53,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { useParams } from 'react-router-dom';
 import { authFetch } from '@/lib/authFetch';
+import { toast } from '@/components/ui/sonner';
+import { useBeforeUnload } from 'react-router-dom';
 
 const nodeTypes = {
   messageNode: MessageNode,
@@ -64,6 +67,11 @@ const nodeTypes = {
 };
 
 const API_BASE_URL = 'http://localhost:8000';
+
+// Utility for deep cloning
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
 
 const FlowBuilder = () => {
   const { botId } = useParams<{ botId: string }>();
@@ -82,6 +90,11 @@ const FlowBuilder = () => {
   const [isCreateFlowDialogOpen, setIsCreateFlowDialogOpen] = useState(false);
   const [newFlowName, setNewFlowName] = useState('');
   const [flowNameError, setFlowNameError] = useState('');
+  const [unsaved, setUnsaved] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const lastSaved = useRef({ nodes: [], edges: [] });
+  const [invalidEdgeIds, setInvalidEdgeIds] = useState<string[]>([]);
+  const [loopDetected, setLoopDetected] = useState(false);
 
   // Fetch flows for the bot on mount
   useEffect(() => {
@@ -117,10 +130,85 @@ const FlowBuilder = () => {
     }
   }, [deletePressed, selectedElements]);
 
+  // Helper: get node index by id
+  const getNodeIndex = (id: string) => nodes.findIndex((n) => n.id === id);
+
+  // Helper: detect cycles (DFS)
+  function hasCycle(edges: Edge[], nodes: Node[], allowConditionLoop = true, maxLoops = 1) {
+    const graph: Record<string, string[]> = {};
+    nodes.forEach((n) => (graph[n.id] = []));
+    edges.forEach((e) => {
+      if (graph[e.source]) graph[e.source].push(e.target);
+    });
+    let loopCount = 0;
+    const visited = new Set<string>();
+    const recStack = new Set<string>();
+    function dfs(nodeId: string, fromCondition = false): boolean {
+      if (!visited.has(nodeId)) {
+        visited.add(nodeId);
+        recStack.add(nodeId);
+        for (const neighbor of graph[nodeId]) {
+          const edge = edges.find((e) => e.source === nodeId && e.target === neighbor);
+          const fromCond = fromCondition || (edge && nodes.find((n) => n.id === nodeId)?.type === 'conditionNode');
+          if (!visited.has(neighbor) && dfs(neighbor, fromCond)) return true;
+          else if (recStack.has(neighbor)) {
+            loopCount++;
+            if (!fromCond || loopCount > maxLoops) return true;
+          }
+        }
+      }
+      recStack.delete(nodeId);
+      return false;
+    }
+    for (const n of nodes) {
+      if (dfs(n.id)) return true;
+    }
+    return false;
+  }
+
+  // Validate edges on change
+  useEffect(() => {
+    let invalids: string[] = [];
+    let loop = false;
+    edges.forEach((edge) => {
+      const sourceIdx = getNodeIndex(edge.source);
+      const targetIdx = getNodeIndex(edge.target);
+      // Prevent backward connection
+      if (sourceIdx > -1 && targetIdx > -1 && targetIdx <= sourceIdx) {
+        invalids.push(edge.id);
+      }
+    });
+    // Loop detection (allow 1 loop from condition node)
+    loop = hasCycle(edges, nodes, true, 1);
+    if (loop) {
+      // Find all edges in the cycle (for highlight)
+      // For simplicity, highlight all edges if a loop is detected
+      invalids = [...new Set([...invalids, ...edges.map((e) => e.id)])];
+    }
+    setInvalidEdgeIds(invalids);
+    setLoopDetected(loop);
+  }, [edges, nodes]);
+
+  // Custom onConnect handler
   const onConnect = useCallback(
-    (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params: Connection | Edge) => {
+      const sourceIdx = getNodeIndex(params.source!);
+      const targetIdx = getNodeIndex(params.target!);
+      if (sourceIdx > -1 && targetIdx > -1 && targetIdx >= sourceIdx) {
+        // Allow forward connection
+        setEdges((eds) => addEdge({ ...params, markerEnd: { type: MarkerType.ArrowClosed } }, eds));
+      } else {
+        toast.error('Backward connections are not allowed.');
+      }
+    },
+    [setEdges, nodes]
   );
+
+  // Edge style for invalid edges
+  const edgeStyles = (edge: Edge) =>
+    invalidEdgeIds.includes(edge.id)
+      ? { stroke: 'red', strokeWidth: 2, markerEnd: { type: MarkerType.ArrowClosed, color: 'red' } }
+      : { markerEnd: { type: MarkerType.ArrowClosed } };
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -194,6 +282,40 @@ const FlowBuilder = () => {
     } catch (err) {}
   };
 
+  const handleUpdateFlow = async (flowId: string, data: any) => {
+    // Always send full nodes/edges
+    if (data.flow_data) {
+      data.flow_data = {
+        nodes: deepClone(data.flow_data.nodes),
+        edges: deepClone(data.flow_data.edges),
+      };
+    }
+    try {
+      const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (response.ok) {
+        const updatedFlow = await response.json();
+        setFlows(flows.map((flow: any) => flow.id === flowId ? updatedFlow : flow));
+        setSelectedFlow(updatedFlow);
+      }
+    } catch (err) {}
+  };
+
+  const handleDeleteFlow = async (flowId: string) => {
+    try {
+      const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setFlows(flows.filter((flow: any) => flow.id !== flowId));
+        setSelectedFlow(flows.length > 1 ? flows[0] : null);
+      }
+    } catch (err) {}
+  };
+
   const handleSetActive = async (flowId: string) => {
     if (!botId) return;
     try {
@@ -210,9 +332,63 @@ const FlowBuilder = () => {
     } catch (err) {}
   };
 
+  useEffect(() => {
+    if (selectedFlow) {
+      setNodes(deepClone(selectedFlow.flow_data?.nodes || []));
+      setEdges(deepClone(selectedFlow.flow_data?.edges || []));
+      lastSaved.current = {
+        nodes: deepClone(selectedFlow.flow_data?.nodes || []),
+        edges: deepClone(selectedFlow.flow_data?.edges || []),
+      };
+      setUnsaved(false);
+    } else {
+      setNodes([]);
+      setEdges([]);
+    }
+  }, [selectedFlow]);
+
+  useEffect(() => {
+    if (!selectedFlow) return;
+    const changed = JSON.stringify(nodes) !== JSON.stringify(lastSaved.current.nodes) || JSON.stringify(edges) !== JSON.stringify(lastSaved.current.edges);
+    setUnsaved(changed);
+  }, [nodes, edges, selectedFlow]);
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (unsaved) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [unsaved]);
+
+  const handleSave = async () => {
+    if (!selectedFlow) return;
+    // Save full nodes/edges with all fields
+    await handleUpdateFlow(selectedFlow.id, { flow_data: { nodes: deepClone(nodes), edges: deepClone(edges) } });
+    lastSaved.current = { nodes: deepClone(nodes), edges: deepClone(edges) };
+    setUnsaved(false);
+    toast.success('Changes saved');
+  };
+
+  const canEdit = !!selectedFlow;
+
+  // Show toast if loop detected
+  useEffect(() => {
+    if (loopDetected) {
+      toast.error('Loops are not allowed except for a single conditional return.');
+    }
+  }, [loopDetected]);
+
+  useEffect(() => {
+    document.title = 'wozza | Flow Builder';
+  }, []);
+
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar />
+      <Sidebar canEdit={canEdit} />
       
       <div className="flex-1 flex flex-col">
         <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -271,7 +447,7 @@ const FlowBuilder = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              <Button size="sm" className="gap-2">
+              <Button size="sm" className="gap-2" onClick={handleSave} disabled={!unsaved || !canEdit || invalidEdgeIds.length > 0 || loopDetected}>
                 <Save className="w-4 h-4" />
                 Save Changes
               </Button>
@@ -300,18 +476,31 @@ const FlowBuilder = () => {
 
         <div className="flex-1" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
+            nodes={nodes.map((node) => {
+              if (node.type === 'aiNode') {
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    onModelChange: (model) => setNodes((nds) => nds.map((n) => n.id === node.id ? { ...n, data: { ...n.data, model } } : n)),
+                    onSystemPromptChange: (systemPrompt) => setNodes((nds) => nds.map((n) => n.id === node.id ? { ...n, data: { ...n.data, systemPrompt } } : n)),
+                    onTemplateChange: (template) => setNodes((nds) => nds.map((n) => n.id === node.id ? { ...n, data: { ...n.data, template } } : n)),
+                  },
+                };
+              }
+              return node;
+            })}
+            edges={edges.map((edge) => ({ ...edge, style: edgeStyles(edge) as any }))}
+            onNodesChange={canEdit ? onNodesChange : undefined}
+            onEdgesChange={canEdit ? onEdgesChange : undefined}
+            onConnect={canEdit ? onConnect : undefined}
             onInit={setReactFlowInstance}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-            onSelectionChange={onSelectionChange}
+            onDrop={canEdit ? onDrop : undefined}
+            onDragOver={canEdit ? onDragOver : undefined}
+            onSelectionChange={canEdit ? onSelectionChange : undefined}
             nodeTypes={nodeTypes}
             fitView
-            className="bg-secondary/10"
+            className={`bg-secondary/10 ${!canEdit ? 'pointer-events-none opacity-50' : ''}`}
             deleteKeyCode={null}
           >
             <Background />
@@ -363,6 +552,19 @@ const FlowBuilder = () => {
             >
               Create Flow
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+            <DialogDescription>You have unsaved changes. Save before leaving?</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowUnsavedDialog(false); /* discard changes logic */ }}>Discard</Button>
+            <Button onClick={async () => { await handleSave(); setShowUnsavedDialog(false); }}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

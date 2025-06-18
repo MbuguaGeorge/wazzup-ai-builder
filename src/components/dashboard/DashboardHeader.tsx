@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, Settings, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import logo from '@/images/wozza.png';
 
 interface DashboardHeaderProps {
   title: string;
@@ -36,7 +37,7 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
     <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center gap-4 px-6">
         <div className="flex-1">
-          <h1 className="text-2xl font-semibold">{title}</h1>
+          
           {subtitle && (
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           )}
