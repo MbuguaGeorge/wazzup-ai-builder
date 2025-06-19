@@ -9,7 +9,7 @@ import Footer from '../components/Footer';
 
 const Index = () => {
   useEffect(() => {
-    document.title = 'wozza | AI WhatsApp Bots for Your Business';
+    document.title = 'wozza | Build AI-powered WhatsApp Bots Visually - No Code Required';
   }, []);
 
   return (
