@@ -3,8 +3,10 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Pricing = () => {
+  const navigate = useNavigate();
   const plans = [
     {
       name: "Starter",
@@ -117,6 +119,7 @@ const Pricing = () => {
                       : 'variant-outline'
                   }`}
                   variant={plan.highlighted ? 'default' : 'outline'}
+                  onClick={() => navigate('/signup')}
                 >
                   {plan.cta}
                   <ArrowRight className="ml-2 w-4 h-4" />
