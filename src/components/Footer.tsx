@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
 import { MessageCircle, Mail, Twitter, Linkedin, Github } from 'lucide-react';
 import logo from '@/images/wozza.png';
@@ -24,8 +25,8 @@ const Footer = () => {
     {
       title: "Legal",
       links: [
-        { name: "Privacy Policy", href: "#privacy" },
-        { name: "Terms of Service", href: "#terms" }
+        { name: "Privacy Policy", href: "/privacy-policy" },
+        { name: "Terms of Service", href: "/terms-of-service" }
       ]
     }
   ];
@@ -67,12 +68,12 @@ const Footer = () => {
               <ul className="space-y-3">
                 {section.links.map((link, linkIndex) => (
                   <li key={linkIndex}>
-                    <a 
-                      href={link.href} 
+                    <Link
+                      to={link.href}
                       className="text-muted-foreground hover:text-foreground transition-colors text-sm"
                     >
                       {link.name}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
