@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { MessageCircle, Brain, FileText, Calendar, ShoppingCart, Bot, Workflow } from 'lucide-react';
+import { MessageCircle, Brain, FileText, Calendar, ShoppingCart, Bot, Workflow, FlagOff } from 'lucide-react';
 
 interface NodeTypeProps {
   icon: React.ReactNode;
@@ -66,6 +66,12 @@ const nodeTypes = {
       label: 'Condition',
       description: 'Branch flow based on user input',
       type: 'conditionNode'
+    },
+    {
+      icon: <FlagOff className="w-4 h-4 text-primary" />,
+      label: 'End Flow',
+      description: 'Mark the end of a conversation path',
+      type: 'endNode'
     }
   ],
   actions: [

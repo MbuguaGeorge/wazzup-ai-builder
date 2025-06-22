@@ -21,6 +21,15 @@
 
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/main.tsx">
+      {`
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "wozza",
+        "url": "https://wozza.io",
+        "logo": "https://wozza.io/favicon.ico",
+        "description": "A no-code platform for building AI WhatsApp bots."
+      `}
+    </script>
   </body>
 </html>

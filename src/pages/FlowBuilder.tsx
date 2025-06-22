@@ -42,6 +42,7 @@ import ConditionNode from '@/components/flow-builder/nodes/ConditionNode';
 import AppointmentNode from '@/components/flow-builder/nodes/AppointmentNode';
 import OrderNode from '@/components/flow-builder/nodes/OrderNode';
 import SheetNode from '@/components/flow-builder/nodes/SheetNode';
+import EndNode from '@/components/flow-builder/nodes/EndNode';
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,10 @@ import { useParams } from 'react-router-dom';
 import { authFetch } from '@/lib/authFetch';
 import { toast } from '@/components/ui/sonner';
 import { useBeforeUnload } from 'react-router-dom';
+import { toast as useToast } from "@/components/ui/use-toast";
+import isEqual from 'lodash/isEqual';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const nodeTypes = {
   messageNode: MessageNode,
@@ -64,6 +69,7 @@ const nodeTypes = {
   appointmentNode: AppointmentNode,
   orderNode: OrderNode,
   sheetNode: SheetNode,
+  endNode: EndNode,
 };
 
 const API_BASE_URL = 'http://localhost:8000';
@@ -92,9 +98,15 @@ const FlowBuilder = () => {
   const [flowNameError, setFlowNameError] = useState('');
   const [unsaved, setUnsaved] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
-  const lastSaved = useRef({ nodes: [], edges: [] });
+  const lastSaved = useRef<{ nodes: Node[], edges: Edge[] } | null>(null);
   const [invalidEdgeIds, setInvalidEdgeIds] = useState<string[]>([]);
   const [loopDetected, setLoopDetected] = useState(false);
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isChanged, setIsChanged] = useState(false);
+  const [initialFlowData, setInitialFlowData] = useState(null);
+  const [validationIssues, setValidationIssues] = useState<string[]>([]);
 
   // Fetch flows for the bot on mount
   useEffect(() => {
@@ -105,12 +117,153 @@ const FlowBuilder = () => {
         if (response.ok) {
           const data = await response.json();
           setFlows(data);
-          if (data.length > 0) setSelectedFlow(data[0]);
+          if (data.length > 0) {
+            const active = data.find((f:any) => f.is_active) || data[0];
+            setSelectedFlow(active);
+          }
         }
       } catch (err) {}
     }
     fetchFlows();
   }, [botId]);
+
+  useEffect(() => {
+    if (selectedFlow && !isEqual(initialFlowData, { nodes, edges })) {
+      setIsChanged(true);
+    } else {
+      setIsChanged(false);
+    }
+  }, [nodes, edges, initialFlowData, selectedFlow]);
+
+  useEffect(() => {
+    if (selectedFlow && lastSaved.current) {
+        // A more robust check for changes
+        const currentFlowData = { nodes, edges };
+        setUnsaved(!isEqual(currentFlowData, lastSaved.current));
+    } else {
+        setUnsaved(false);
+    }
+  }, [nodes, edges, selectedFlow]);
+
+  const updateNodeData = useCallback((nodeId: string, data: any) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          // Create a new data object to ensure React detects the change
+          const newData = { ...node.data, ...data };
+          return { ...node, data: newData };
+        }
+        return node;
+      })
+    );
+  }, [setNodes]);
+
+  const refetchSingleFlow = async (flowId: string) => {
+    const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`);
+    if (response.ok) {
+      const updatedFlow = await response.json();
+      setFlows(flows.map(f => f.id === flowId ? updatedFlow : f));
+      setSelectedFlow(updatedFlow);
+    }
+  }
+
+  const handleFileChange = async (nodeId: string, filesToUpload: File[]) => {
+    const originalNode = nodes.find(n => n.id === nodeId);
+    if (!originalNode || !selectedFlow) return;
+
+    // 1. Optimistic UI update
+    const optimisticFiles = filesToUpload.map(file => ({
+      id: `temp-${Date.now()}-${file.name}`,
+      name: file.name,
+      uploading: true,
+    }));
+
+    setNodes(nds => nds.map(n => {
+      if (n.id === nodeId) {
+        const newFiles = [...(n.data.files || []), ...optimisticFiles];
+        return { ...n, data: { ...n.data, files: newFiles } };
+      }
+      return n;
+    }));
+
+    // 2. Upload the files
+    const formData = new FormData();
+    filesToUpload.forEach(file => formData.append('file', file));
+    formData.append('node_id', nodeId);
+
+    try {
+      const response = await authFetch(`${API_BASE_URL}/api/flows/${selectedFlow.id}/upload/`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('File upload failed');
+      
+      const uploadedFiles = await response.json();
+      
+      // 3. Replace optimistic files with real ones
+      setNodes(nds => nds.map(n => {
+        if (n.id === nodeId) {
+          const nonTemporaryFiles = n.data.files.filter(f => !f.id.startsWith('temp-'));
+          const finalFiles = [...nonTemporaryFiles, ...uploadedFiles.map(f => ({ id: f.id, name: f.name }))];
+          return { ...n, data: { ...n.data, files: finalFiles } };
+        }
+        return n;
+      }));
+      toast.success('File uploaded successfully');
+
+    } catch (error) {
+      console.error('File upload error:', error);
+      // 4. Revert on failure
+      setNodes(nds => nds.map(n => {
+        if (n.id === nodeId) {
+          const revertedFiles = n.data.files.filter(f => !f.id.startsWith('temp-'));
+          return { ...n, data: { ...n.data, files: revertedFiles } };
+        }
+        return n;
+      }));
+      toast.error('Error uploading file. Please try again.');
+    }
+  };
+
+  const handleFileRemove = async (nodeId: string, fileToRemove: any) => {
+    const originalNode = nodes.find(n => n.id === nodeId);
+    if (!originalNode || !selectedFlow) return;
+
+    const originalFiles = originalNode.data.files;
+
+    // 1. Optimistic UI update
+    setNodes(nds => nds.map(n => {
+        if (n.id === nodeId) {
+            const newFiles = n.data.files.filter(f => f.id !== fileToRemove.id);
+            return { ...n, data: { ...n.data, files: newFiles } };
+        }
+        return n;
+    }));
+
+    try {
+      if (fileToRemove.id.startsWith('temp-')) return; // It's not on the server yet
+
+      const response = await authFetch(`${API_BASE_URL}/api/flows/${selectedFlow.id}/files/${fileToRemove.id}/`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('File deletion failed');
+      
+      toast.success('File deleted successfully');
+      
+    } catch (error) {
+      console.error('File deletion error:', error);
+      // 2. Revert on failure
+      setNodes(nds => nds.map(n => {
+          if (n.id === nodeId) {
+              return { ...n, data: { ...n.data, files: originalFiles } };
+          }
+          return n;
+      }));
+      toast.error('Error deleting file. Please try again.');
+    }
+  };
 
   const filteredFlows = flows.filter((flow) => {
     if (flowFilter === 'all') return true;
@@ -133,75 +286,100 @@ const FlowBuilder = () => {
   // Helper: get node index by id
   const getNodeIndex = (id: string) => nodes.findIndex((n) => n.id === id);
 
-  // Helper: detect cycles (DFS)
-  function hasCycle(edges: Edge[], nodes: Node[], allowConditionLoop = true, maxLoops = 1) {
-    const graph: Record<string, string[]> = {};
-    nodes.forEach((n) => (graph[n.id] = []));
-    edges.forEach((e) => {
-      if (graph[e.source]) graph[e.source].push(e.target);
-    });
-    let loopCount = 0;
-    const visited = new Set<string>();
-    const recStack = new Set<string>();
-    function dfs(nodeId: string, fromCondition = false): boolean {
-      if (!visited.has(nodeId)) {
+  const validateFlow = useCallback((nodesToValidate: Node[], edgesToValidate: Edge[]) => {
+    const issues: string[] = [];
+    if (nodesToValidate.length === 0) return;
+
+    const entryNode = nodesToValidate.find(n => n.type === 'inputNode');
+    if (!entryNode) {
+        issues.push("A flow must have an 'Incoming Message' entry node.");
+    }
+
+    const nodeIds = new Set(nodesToValidate.map(n => n.id));
+    const connectedTargets = new Set(edgesToValidate.map(e => e.target));
+    const connectedSources = new Set(edgesToValidate.map(e => e.source));
+
+    // 1. Cycle Detection (DFS)
+    const visited = new Set();
+    const recursionStack = new Set();
+    const graph = new Map(nodesToValidate.map(n => [n.id, []]));
+    edgesToValidate.forEach(e => graph.get(e.source)?.push(e.target));
+
+    function detectCycle(nodeId: string): boolean {
         visited.add(nodeId);
-        recStack.add(nodeId);
-        for (const neighbor of graph[nodeId]) {
-          const edge = edges.find((e) => e.source === nodeId && e.target === neighbor);
-          const fromCond = fromCondition || (edge && nodes.find((n) => n.id === nodeId)?.type === 'conditionNode');
-          if (!visited.has(neighbor) && dfs(neighbor, fromCond)) return true;
-          else if (recStack.has(neighbor)) {
-            loopCount++;
-            if (!fromCond || loopCount > maxLoops) return true;
-          }
+        recursionStack.add(nodeId);
+        const neighbors = graph.get(nodeId) || [];
+        for (const neighbor of neighbors) {
+            if (!visited.has(neighbor)) {
+                if (detectCycle(neighbor)) return true;
+            } else if (recursionStack.has(neighbor)) {
+                return true;
+            }
         }
-      }
-      recStack.delete(nodeId);
+        recursionStack.delete(nodeId);
       return false;
     }
-    for (const n of nodes) {
-      if (dfs(n.id)) return true;
-    }
-    return false;
-  }
 
-  // Validate edges on change
-  useEffect(() => {
-    let invalids: string[] = [];
-    let loop = false;
-    edges.forEach((edge) => {
-      const sourceIdx = getNodeIndex(edge.source);
-      const targetIdx = getNodeIndex(edge.target);
-      // Prevent backward connection
-      if (sourceIdx > -1 && targetIdx > -1 && targetIdx <= sourceIdx) {
-        invalids.push(edge.id);
-      }
-    });
-    // Loop detection (allow 1 loop from condition node)
-    loop = hasCycle(edges, nodes, true, 1);
-    if (loop) {
-      // Find all edges in the cycle (for highlight)
-      // For simplicity, highlight all edges if a loop is detected
-      invalids = [...new Set([...invalids, ...edges.map((e) => e.id)])];
+    if (nodesToValidate.some(n => !visited.has(n.id) && detectCycle(n.id))) {
+        issues.push("The flow contains a cycle or loop. Please remove it.");
     }
-    setInvalidEdgeIds(invalids);
-    setLoopDetected(loop);
-  }, [edges, nodes]);
+
+    // 2. Orphaned and Unreachable nodes
+    if (entryNode) {
+        const reachableNodes = new Set([entryNode.id]);
+        const queue = [entryNode.id];
+
+        while(queue.length > 0) {
+            const currentId = queue.shift()!;
+            const outgoingEdges = edgesToValidate.filter(e => e.source === currentId);
+            for (const edge of outgoingEdges) {
+                if (!reachableNodes.has(edge.target)) {
+                    reachableNodes.add(edge.target);
+                    queue.push(edge.target);
+                }
+            }
+        }
+
+        nodesToValidate.forEach(node => {
+            if (!reachableNodes.has(node.id)) {
+                issues.push(`Node '${node.data.label || node.id}' is unreachable from the entry point.`);
+            }
+            if (node.id !== entryNode.id && !connectedTargets.has(node.id)) {
+                issues.push(`Node '${node.data.label || node.id}' is orphaned. It has no incoming connections.`);
+            }
+        });
+    }
+
+    // 3. Nodes without output connections (except terminal nodes)
+    const terminalNodeTypes = ['messageNode', 'endNode'];
+    nodesToValidate.forEach(node => {
+        if (!terminalNodeTypes.includes(node.type!) && !connectedSources.has(node.id) && nodesToValidate.length > 1) {
+             // Exception for condition node which has specific source handles
+            if (node.type === 'conditionNode') {
+                const hasTrueExit = edgesToValidate.some(e => e.source === node.id && e.sourceHandle === 'true');
+                const hasFalseExit = edgesToValidate.some(e => e.source === node.id && e.sourceHandle === 'false');
+                if (!hasTrueExit || !hasFalseExit) {
+                     issues.push(`Condition node '${node.data.label || node.id}' is missing one or more output connections.`);
+                }
+            } else if (node.type !== 'inputNode' || connectedTargets.has(node.id)) { // not an entry or already connected
+                 issues.push(`Node '${node.data.label || node.id}' is a dead end. It has no outgoing connections. Consider connecting it to another node or an 'End Flow' node.`);
+            }
+        }
+    });
+
+    setValidationIssues(issues);
+}, []);
+
+  useEffect(() => {
+    validateFlow(nodes, edges);
+  }, [nodes, edges, validateFlow]);
 
   // Custom onConnect handler
   const onConnect = useCallback(
     (params: Connection | Edge) => {
-      const sourceIdx = getNodeIndex(params.source!);
-      const targetIdx = getNodeIndex(params.target!);
-      if (sourceIdx > -1 && targetIdx > -1 && targetIdx >= sourceIdx) {
-        // Allow forward connection
         setEdges((eds) => addEdge({ ...params, markerEnd: { type: MarkerType.ArrowClosed } }, eds));
-      } else {
-        toast.error('Backward connections are not allowed.');
-      }
     },
-    [setEdges, nodes]
+    [setEdges]
   );
 
   // Edge style for invalid edges
@@ -219,26 +397,88 @@ const FlowBuilder = () => {
     (event: React.DragEvent) => {
       event.preventDefault();
 
+      if (!reactFlowWrapper.current || !selectedFlow) {
+        useToast({ title: "Cannot Add Node", description: "Please select or create a flow first.", variant: "destructive" });
+        return;
+      }
+
       const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
       const type = event.dataTransfer.getData('application/reactflow');
 
-      if (typeof type === 'string' && reactFlowBounds && reactFlowInstance) {
-        const position = reactFlowInstance.project({
-          x: event.clientX - reactFlowBounds.left,
-          y: event.clientY - reactFlowBounds.top,
-        });
+      if (typeof type === 'undefined' || !type) return;
+      if (type === 'inputNode' && nodes.some(n => n.type === 'inputNode')) {
+        useToast({ title: "Input Node Exists", description: "Only one Input Node is allowed per flow.", variant: "destructive" });
+        return;
+      }
 
-        const newNode: Node = {
-          id: `${type}-${nodes.length + 1}`,
+      const position = reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      const newNodeId = `${type}-${+new Date()}`;
+      const baseNode = {
+        id: newNodeId,
           type,
           position,
-          data: { label: `${type} node` },
+          data: { 
+            label: `${type} node`,
+            onUpdate: (data) => updateNodeData(newNodeId, data),
+            onFilesChange: (files) => handleFileChange(newNodeId, files),
+            onFileRemove: (file) => handleFileRemove(newNodeId, file),
+          },
         };
 
-        setNodes((nds) => nds.concat(newNode));
+      let specificNode;
+      switch (type) {
+        case 'messageNode':
+          specificNode = {
+            ...baseNode,
+            data: {
+              ...baseNode.data,
+              message: '',
+            },
+          };
+          break;
+        case 'endNode':
+          specificNode = {
+            ...baseNode,
+            data: {
+              ...baseNode.data,
+            },
+          };
+          break;
+        case 'aiNode':
+          specificNode = {
+            ...baseNode,
+            data: {
+              ...baseNode.data,
+              systemPrompt: '',
+              model: 'gpt-4o',
+              template: 'AI Response: {openai_response}',
+              fallbackResponse: "I'm sorry, I don't have the information to answer that. Let me connect you to a human.",
+              extraInstructions: '',
+              files: [],
+              gdrive_links: [],
+            },
+          };
+          break;
+        case 'conditionNode':
+          specificNode = {
+            ...baseNode,
+            data: {
+              ...baseNode.data,
+              condition: {
+                type: 'text',
+                operator: 'equals',
+                value: '',
+              },
+            },
+          };
+          break;
+        default:
+          specificNode = baseNode;
       }
+
+      setNodes((nds) => nds.concat(specificNode));
     },
-    [reactFlowInstance, nodes, setNodes]
+    [reactFlowInstance, nodes, selectedFlow, updateNodeData]
   );
 
   const onSelectionChange = useCallback(
@@ -334,24 +574,30 @@ const FlowBuilder = () => {
 
   useEffect(() => {
     if (selectedFlow) {
-      setNodes(deepClone(selectedFlow.flow_data?.nodes || []));
-      setEdges(deepClone(selectedFlow.flow_data?.edges || []));
+      const flowData = selectedFlow.flow_data || { nodes: [], edges: [] };
+      
+      const initialNodes = deepClone(flowData.nodes).map((node: any) => {
+        const nodeId = node.id;
+        node.data.onUpdate = (data) => updateNodeData(nodeId, data);
+        node.data.onFilesChange = (files) => handleFileChange(nodeId, files);
+        node.data.onFileRemove = (file) => handleFileRemove(nodeId, file);
+        return node;
+      });
+      const initialEdges = deepClone(flowData.edges);
+
+      setNodes(initialNodes);
+      setEdges(initialEdges);
       lastSaved.current = {
-        nodes: deepClone(selectedFlow.flow_data?.nodes || []),
-        edges: deepClone(selectedFlow.flow_data?.edges || []),
+        nodes: initialNodes,
+        edges: initialEdges,
       };
       setUnsaved(false);
     } else {
       setNodes([]);
       setEdges([]);
+      lastSaved.current = null;
     }
-  }, [selectedFlow]);
-
-  useEffect(() => {
-    if (!selectedFlow) return;
-    const changed = JSON.stringify(nodes) !== JSON.stringify(lastSaved.current.nodes) || JSON.stringify(edges) !== JSON.stringify(lastSaved.current.edges);
-    setUnsaved(changed);
-  }, [nodes, edges, selectedFlow]);
+  }, [selectedFlow, updateNodeData]);
 
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
@@ -366,8 +612,28 @@ const FlowBuilder = () => {
 
   const handleSave = async () => {
     if (!selectedFlow) return;
-    // Save full nodes/edges with all fields
-    await handleUpdateFlow(selectedFlow.id, { flow_data: { nodes: deepClone(nodes), edges: deepClone(edges) } });
+    validateFlow(nodes, edges);
+    if (validationIssues.length > 0) {
+      toast.error("Cannot save flow with validation issues. Please fix them first.");
+      return;
+    }
+
+    // Create a clean payload for saving
+    const nodesToSave = deepClone(nodes).map(node => {
+      delete node.data.onUpdate;
+      delete node.data.onFilesChange;
+      delete node.data.onFileRemove;
+      // remove any lingering temp files
+      if (node.data.files) {
+        node.data.files = node.data.files.filter(f => !f.uploading);
+      }
+      return node;
+    });
+
+    await handleUpdateFlow(selectedFlow.id, { 
+      flow_data: { nodes: nodesToSave, edges: deepClone(edges) } 
+    });
+    
     lastSaved.current = { nodes: deepClone(nodes), edges: deepClone(edges) };
     setUnsaved(false);
     toast.success('Changes saved');
@@ -447,7 +713,7 @@ const FlowBuilder = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              <Button size="sm" className="gap-2" onClick={handleSave} disabled={!unsaved || !canEdit || invalidEdgeIds.length > 0 || loopDetected}>
+              <Button size="sm" className="gap-2" onClick={handleSave} disabled={!unsaved || !canEdit || validationIssues.length > 0}>
                 <Save className="w-4 h-4" />
                 Save Changes
               </Button>
@@ -471,25 +737,25 @@ const FlowBuilder = () => {
                 </Button>
               </div>
             </div>
+            {validationIssues.length > 0 && (
+                <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Flow Validation Issues</AlertTitle>
+                    <AlertDescription>
+                        <ul className="list-disc pl-5">
+                            {validationIssues.map((issue, index) => (
+                                <li key={index}>{issue}</li>
+                            ))}
+                        </ul>
+                    </AlertDescription>
+                </Alert>
+            )}
           </div>
         </div>
 
         <div className="flex-1" ref={reactFlowWrapper}>
           <ReactFlow
-            nodes={nodes.map((node) => {
-              if (node.type === 'aiNode') {
-                return {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    onModelChange: (model) => setNodes((nds) => nds.map((n) => n.id === node.id ? { ...n, data: { ...n.data, model } } : n)),
-                    onSystemPromptChange: (systemPrompt) => setNodes((nds) => nds.map((n) => n.id === node.id ? { ...n, data: { ...n.data, systemPrompt } } : n)),
-                    onTemplateChange: (template) => setNodes((nds) => nds.map((n) => n.id === node.id ? { ...n, data: { ...n.data, template } } : n)),
-                  },
-                };
-              }
-              return node;
-            })}
+            nodes={nodes}
             edges={edges.map((edge) => ({ ...edge, style: edgeStyles(edge) as any }))}
             onNodesChange={canEdit ? onNodesChange : undefined}
             onEdgesChange={canEdit ? onEdgesChange : undefined}
