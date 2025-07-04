@@ -10,7 +10,10 @@ import Dashboard from "./pages/Dashboard";
 import FlowBuilder from "./pages/FlowBuilder";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
+import TermsOfService from "./pages/TermsOfService"; 
+import Billing from "./pages/Billing";
+import Notifications from "./pages/Notifications";
+import DashboardLayout from "./pages/DashboardLayout";
 
 const queryClient = new QueryClient();
 
@@ -32,7 +35,13 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
-          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          
+          <Route path="/dashboard" element={<PrivateRoute><DashboardLayout title="Dashboard" /></PrivateRoute>}>
+            <Route index element={<Dashboard />} />
+            <Route path="billing" element={<Billing />} />
+            <Route path="notifications" element={<Notifications />} />
+          </Route>
+
           <Route path="/flow-builder/:botId?" element={<PrivateRoute><FlowBuilder /></PrivateRoute>} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />

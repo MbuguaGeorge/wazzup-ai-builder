@@ -23,6 +23,7 @@ import {
   AlertCircle,
   GitBranch,
   Check,
+  BarChart2,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -128,17 +129,12 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename,
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel>Bot Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => onManageFlows(bot.id)}>
-              <Edit3 className="mr-2 h-4 w-4" />
-              Manage Flows
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onRename(bot.id, bot.name)}>
               <Edit3 className="mr-2 h-4 w-4" />
               Rename Bot
@@ -146,6 +142,10 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename,
             <DropdownMenuItem onClick={() => onDuplicate(bot.id)}>
               <Copy className="mr-2 h-4 w-4" />
               Duplicate Bot
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate(`/bot/${bot.id}/analytics`)}>
+              <BarChart2 className="mr-2 h-4 w-4" />
+              View Analytics
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -193,7 +193,6 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename,
             <Button
               variant="outline"
               size="sm"
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={() => navigate(`/bot-settings/${bot.id}`)}
             >
               <Settings2 className="mr-2 h-4 w-4" />
@@ -202,7 +201,6 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename,
             <Button
               variant="default"
               size="sm"
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={() => navigate(`/flow-builder/${bot.id}`)}
             >
               <Pencil className="mr-2 h-4 w-4" />

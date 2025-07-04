@@ -48,11 +48,20 @@ const DashboardSidebar = () => {
     },
   ];
 
+  const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+      'hover:bg-accent hover:text-accent-foreground',
+      isActive
+        ? 'bg-accent text-accent-foreground'
+        : 'text-muted-foreground'
+    );
+
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-background">
       <div className="p-5">
         <div className="flex items-center gap-0 font-semibold">
-          <img src={logo} alt="wozzy logo" className="h-10 w-10 rounded-lg bg-primary object-cover" />
+          <img src={logo} alt="wozza logo" className="h-10 w-10 rounded-lg bg-primary object-cover" />
           <span className="text-xl">wozza</span>
         </div>
       </div>
@@ -62,15 +71,8 @@ const DashboardSidebar = () => {
           <NavLink
             key={item.href}
             to={item.href}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                'hover:bg-accent hover:text-accent-foreground',
-                isActive
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground'
-              )
-            }
+            end={item.href === '/dashboard'}
+            className={getNavLinkClass}
           >
             <item.icon className="h-4 w-4" />
             {item.title}

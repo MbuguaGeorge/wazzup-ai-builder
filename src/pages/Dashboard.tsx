@@ -11,12 +11,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Search, Bot, Plus } from 'lucide-react';
+import { Search, Bot, Plus, Users, MessageSquare, BarChart2 } from 'lucide-react';
 import BotCard from '@/components/dashboard/BotCard';
 import CreateBotCard from '@/components/dashboard/CreateBotCard';
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { authFetch } from '@/lib/authFetch';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -46,6 +46,9 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [bots, setBots] = useState<Bot[]>([]);
   const [botNameError, setBotNameError] = useState('');
+  const [filteredBots, setFilteredBots] = useState<Bot[]>([]);
+  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [botToInteract, setBotToInteract] = useState<Bot | null>(null);
 
   // Fetch bots on mount
   useEffect(() => {
@@ -66,6 +69,13 @@ const Dashboard = () => {
   useEffect(() => {
     document.title = 'wozza | Dashboard';
   }, []);
+
+  useEffect(() => {
+    const results = bots.filter(bot =>
+      bot.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredBots(results);
+  }, [searchQuery, bots]);
 
   const validateBotName = (name: string) => {
     if (!name.trim()) {
@@ -168,72 +178,95 @@ const Dashboard = () => {
     } catch (err) {}
   };
 
-  const filteredBots = bots.filter(bot =>
-    bot.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const analyticsData = [
+    {
+      title: 'Total Bots',
+      value: '4',
+      change: '+1 from last month',
+      icon: Bot,
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
+    },
+    {
+      title: 'Active Bots',
+      value: '2',
+      change: 'Currently running',
+      icon: Users,
+      color: 'text-green-500',
+      bgColor: 'bg-green-500/10',
+    },
+    {
+      title: 'Messages Today',
+      value: '326',
+      change: '+12% from yesterday',
+      icon: MessageSquare,
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-500/10',
+    },
+    {
+      title: 'Success Rate',
+      value: '94%',
+      change: 'Last 7 days',
+      icon: BarChart2,
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-500/10',
+    },
+  ];
 
   return (
-    <div className="flex h-screen bg-background">
-      <DashboardSidebar />
-      
-      <div className="flex-1 flex flex-col">
-        <DashboardHeader 
-          title="My Bots"
-          subtitle="Create and manage your WhatsApp bots with wozza"
-        />
+    <>
+      {/* Analytics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        {analyticsData.map((data, index) => (
+          <Card key={index}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{data.title}</CardTitle>
+              <div className={cn("p-2 rounded-lg", data.bgColor)}>
+                <data.icon className={cn("h-4 w-4", data.color)} />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl pb-2 font-bold">{data.value}</div>
+              <p className="text-xs text-muted-foreground">{data.change}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-        <div className="flex-1 overflow-auto">
-          <div className="container mx-auto p-6 space-y-6">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+      {/* Your Bots Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Your Bots</h2>
+          <p className="text-muted-foreground">Manage and monitor your bots.</p>
+        </div>
+        <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
                 placeholder="Search bots..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {filteredBots.length === 0 && !searchQuery ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Bot className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">No bots yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Create your first WhatsApp bot to get started
-                </p>
-                <Button onClick={() => setIsCreateDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create your first bot
-                </Button>
-              </div>
-            ) : filteredBots.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                  No bots match your search query
-                </p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <CreateBotCard onClick={() => setIsCreateDialogOpen(true)} />
-                {filteredBots.map((bot) => (
-                  <BotCard
-                    key={bot.id}
-                    bot={bot}
-                    onDelete={handleDeleteBot}
-                    onDuplicate={handleDuplicateBot}
-                    onRename={handleRenameBot}
-                    onManageFlows={handleManageFlows}
-                    onSetActiveFlow={handleSetActiveFlow}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+                className="pl-9 rounded-full"
+            />
         </div>
       </div>
 
+      {/* Bots Grid */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <CreateBotCard onClick={() => setIsCreateDialogOpen(true)} />
+        {filteredBots.map((bot) => (
+          <BotCard
+            key={bot.id}
+            bot={bot} 
+            onDelete={() => { setBotToInteract(bot); setDeleteDialogOpen(true); }}
+            onDuplicate={() => handleDuplicateBot(bot.id)}
+            onRename={handleRenameBot}
+            onManageFlows={() => navigate(`/bot/${bot.id}/flows`)}
+            onSetActiveFlow={handleSetActiveFlow}
+          />
+        ))}
+      </div>
+
+      {/* Dialogs */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -280,7 +313,14 @@ const Dashboard = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+      <Dialog open={isRenameDialogOpen} onOpenChange={(open) => {
+        setIsRenameDialogOpen(open);
+        if (!open) {
+          setNewBotName('');
+          setSelectedBotId(null);
+          setBotNameError('');
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename Bot</DialogTitle>
@@ -326,7 +366,7 @@ const Dashboard = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 
