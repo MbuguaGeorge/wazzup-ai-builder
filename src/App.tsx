@@ -14,6 +14,8 @@ import TermsOfService from "./pages/TermsOfService";
 import Billing from "./pages/Billing";
 import Notifications from "./pages/Notifications";
 import DashboardLayout from "./pages/DashboardLayout";
+import ChatDashboard from "./pages/ChatDashboard";
+import BotSettingsPage from './pages/BotSettingsPage';
 
 const queryClient = new QueryClient();
 
@@ -40,6 +42,7 @@ const App = () => (
             <Route index element={<Dashboard />} />
             <Route path="billing" element={<Billing />} />
             <Route path="notifications" element={<Notifications />} />
+            <Route path="chat-management" element={<ChatDashboard />} />
           </Route>
 
           <Route path="/flow-builder/:botId?" element={<PrivateRoute><FlowBuilder /></PrivateRoute>} />

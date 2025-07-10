@@ -47,12 +47,12 @@ interface Flow {
 
 interface BotCardProps {
   bot: {
+    whatsapp_connected: boolean;
     id: string;
     name: string;
     createdAt: string;
     status: 'active' | 'draft' | 'disconnected';
-    lastModified: string;
-    isConnected: boolean;
+    last_updated: string;
     activeFlow?: {
       id: string;
       name: string;
@@ -64,6 +64,7 @@ interface BotCardProps {
   onRename: (id: string, name: string) => void;
   onManageFlows: (id: string) => void;
   onSetActiveFlow?: (botId: string, flowId: string) => void;
+  onOpenSettings?: () => void;
 }
 
 const statusConfig = {
@@ -72,7 +73,7 @@ const statusConfig = {
   disconnected: { icon: '🔴', label: 'Disconnected', className: 'bg-red-500/10 text-red-500' },
 };
 
-const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename, onManageFlows, onSetActiveFlow }) => {
+const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename, onManageFlows, onSetActiveFlow, onOpenSettings }) => {
   const navigate = useNavigate();
   const status = statusConfig[bot.status];
   const flows = bot.flows || [];
@@ -160,18 +161,18 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename,
       </CardHeader>
       <CardContent className="p-4 pt-0 space-y-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Last updated {new Date(bot.lastModified).toLocaleDateString()}</span>
+          <span>Last updated {new Date(bot.last_updated).toLocaleDateString()}</span>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-2">
-                  {bot.isConnected ? (
+                  {bot.whatsapp_connected ? (
                       <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
                         <MessageSquare className="w-3 h-3 mr-1" />
-                      Connected to WhatsApp
+                        WhatsApp Connected
                       </Badge>
                   ) : (
                       <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
@@ -182,7 +183,7 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename,
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                {bot.isConnected
+                {bot.whatsapp_connected
                   ? "This bot can currently receive and reply to WhatsApp messages"
                   : "Connect this bot to WhatsApp to start receiving messages"}
               </TooltipContent>
@@ -193,7 +194,7 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename,
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate(`/bot-settings/${bot.id}`)}
+              onClick={onOpenSettings}
             >
               <Settings2 className="mr-2 h-4 w-4" />
               Settings

@@ -19,34 +19,13 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import logo from '@/images/wozza.png';
+import NotificationDropdown from './NotificationDropdown';
 
 interface DashboardHeaderProps {
   title: string;
   subtitle?: string;
 }
 
-const notifications = [
-    {
-        title: "New feature alert: AI-powered responses!",
-        description: "Your bots can now leverage the latest AI models to provide...",
-        time: "15m ago"
-    },
-    {
-        title: "Flow 'Customer Survey' has a high drop-off rate.",
-        description: "Consider reviewing the flow analytics to improve user engagement.",
-        time: "1h ago"
-    },
-    {
-        title: "Bot 'Sales Demo' has been successfully connected.",
-        description: "You can now start building flows for your new bot.",
-        time: "3h ago"
-    },
-    {
-        title: "Your subscription is due for renewal soon.",
-        description: "To avoid service interruptions, please update your billing details.",
-        time: "1d ago"
-    }
-];
 
 const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const [user, setUser] = useState({
@@ -54,7 +33,6 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
     email: 'john@example.com',
     avatarUrl: '',
   });
-  const [notificationCount, setNotificationCount] = useState(notifications.length);
 
   const navigate = useNavigate();
 
@@ -62,14 +40,6 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
     localStorage.removeItem('token');
     localStorage.removeItem('refresh');
     navigate('/login');
-  };
-
-  const handleMarkAllAsRead = () => {
-    setNotificationCount(0);
-  };
-
-  const handleViewAll = () => {
-    navigate('/dashboard/notifications');
   };
 
   return (
@@ -83,43 +53,7 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
         </div>
 
         <div className="flex items-center gap-4">
-          <Popover>
-            <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="h-5 w-5" />
-                    {notificationCount > 0 && (
-                        <span className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
-                            {notificationCount}
-                        </span>
-                    )}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0">
-                <div className="p-4">
-                    <h4 className="text-sm font-medium">Notifications</h4>
-                </div>
-                <Separator />
-                <div className="max-h-80 overflow-y-auto">
-                    {notifications.slice(0, 3).map((notification, index) => (
-                        <div key={index} className="p-4 hover:bg-accent">
-                            <h5 className="text-sm font-medium truncate">{notification.title}</h5>
-                            <p className="text-xs text-muted-foreground truncate">{notification.description}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{notification.time}</p>
-                        </div>
-                    ))}
-                    {notifications.length > 3 && (
-                        <div className="p-4 text-center text-sm text-muted-foreground">...</div>
-                    )}
-                </div>
-                <Separator />
-                <div className='p-2 flex justify-between items-center'>
-                    <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead}>
-                        <CheckCheck className="mr-2 h-4 w-4" /> Mark all as read
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={handleViewAll}>View all</Button>
-                </div>
-            </PopoverContent>
-          </Popover>
+          <NotificationDropdown />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

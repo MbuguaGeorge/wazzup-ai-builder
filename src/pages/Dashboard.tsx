@@ -17,6 +17,7 @@ import CreateBotCard from '@/components/dashboard/CreateBotCard';
 import { authFetch } from '@/lib/authFetch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import BotSettingsPage from '@/pages/BotSettingsPage';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -31,11 +32,23 @@ interface Bot {
   name: string;
   createdAt: string;
   status: 'active' | 'draft' | 'disconnected';
-  lastModified: string;
-  isConnected: boolean;
+  last_updated: string;
+  whatsapp_connected: boolean;
   activeFlow: { id: string; name: string; } | null;
   flows: Flow[];
 }
+
+const fetchBots = async (setBots: React.Dispatch<React.SetStateAction<Bot[]>>) => {
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/bots/`);
+    if (response.ok) {
+      const data = await response.json();
+      setBots(data);
+    }
+  } catch (err) {
+    // Handle error (already handled by authFetch for 401)
+  }
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -49,21 +62,22 @@ const Dashboard = () => {
   const [filteredBots, setFilteredBots] = useState<Bot[]>([]);
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [botToInteract, setBotToInteract] = useState<Bot | null>(null);
+  const [settingsBotId, setSettingsBotId] = useState<string | null>(null);
+  const [botStats, setBotStats] = useState({ total_bots: 0, active_bots: 0 });
 
-  // Fetch bots on mount
+  // Fetch bots and stats on mount
   useEffect(() => {
-    async function fetchBots() {
+    fetchBots(setBots);
+    async function fetchStats() {
       try {
-        const response = await authFetch(`${API_BASE_URL}/api/bots/`);
+        const response = await authFetch(`${API_BASE_URL}/api/bots/stats/`);
         if (response.ok) {
           const data = await response.json();
-          setBots(data);
+          setBotStats(data);
         }
-      } catch (err) {
-        // Handle error (already handled by authFetch for 401)
-      }
+      } catch (err) {}
     }
-    fetchBots();
+    fetchStats();
   }, []);
 
   useEffect(() => {
@@ -178,10 +192,11 @@ const Dashboard = () => {
     } catch (err) {}
   };
 
+
   const analyticsData = [
     {
       title: 'Total Bots',
-      value: '4',
+      value: botStats.total_bots,
       change: '+1 from last month',
       icon: Bot,
       color: 'text-blue-500',
@@ -189,7 +204,7 @@ const Dashboard = () => {
     },
     {
       title: 'Active Bots',
-      value: '2',
+      value: botStats.active_bots,
       change: 'Currently running',
       icon: Users,
       color: 'text-green-500',
@@ -256,12 +271,13 @@ const Dashboard = () => {
         {filteredBots.map((bot) => (
           <BotCard
             key={bot.id}
-            bot={bot} 
+            bot={bot}
             onDelete={() => { setBotToInteract(bot); setDeleteDialogOpen(true); }}
             onDuplicate={() => handleDuplicateBot(bot.id)}
             onRename={handleRenameBot}
             onManageFlows={() => navigate(`/bot/${bot.id}/flows`)}
             onSetActiveFlow={handleSetActiveFlow}
+            onOpenSettings={() => setSettingsBotId(bot.id)}
           />
         ))}
       </div>
@@ -364,6 +380,16 @@ const Dashboard = () => {
               Save Changes
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!settingsBotId} onOpenChange={(open) => { if (!open) setSettingsBotId(null); }}>
+        <DialogContent className="max-w-4xl w-full p-0 overflow-y-auto max-h-[90vh]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Bot Settings</DialogTitle>
+            <DialogDescription>Configure your bot's settings, WhatsApp connection, and behavior preferences.</DialogDescription>
+          </DialogHeader>
+          {settingsBotId && <BotSettingsPage botId={settingsBotId} onClose={() => setSettingsBotId(null)} onBotUpdated={() => fetchBots(setBots)} />}
         </DialogContent>
       </Dialog>
     </>
