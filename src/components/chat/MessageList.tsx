@@ -1,6 +1,9 @@
-import React from 'react';
-import { MessageBubble } from './MessageBubble';
+import React, { useEffect, useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { MessageBubble } from './MessageBubble';
+import { authFetch } from '@/lib/authFetch';
+import { getAccessToken } from '@/lib/auth';
+import { io, Socket } from 'socket.io-client';
 
 interface Message {
   id: string;
@@ -19,76 +22,153 @@ interface MessageListProps {
   conversationId: string;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ conversationId }) => {
-  // Mock messages data
-  const messages: Message[] = [
-    {
-      id: '1',
-      type: 'text',
-      content: 'Hi! I need help with my recent order.',
-      sender: 'customer',
-      timestamp: '9:45 AM',
-      isRead: true
-    },
-    {
-      id: '2',
-      type: 'text',
-      content: 'Hello! I\'d be happy to help you with your order. Can you please provide your order number?',
-      sender: 'bot',
-      timestamp: '9:45 AM',
-      isRead: true
-    },
-    {
-      id: '3',
-      type: 'text',
-      content: 'My order number is #12345',
-      sender: 'customer',
-      timestamp: '9:46 AM',
-      isRead: true
-    },
-    {
-      id: '4',
-      type: 'button',
-      content: 'I found your order! What would you like to do?',
-      sender: 'bot',
-      timestamp: '9:46 AM',
-      isRead: true,
-      buttons: [
-        { id: 'track', text: 'Track Order', selected: true },
-        { id: 'cancel', text: 'Cancel Order' },
-        { id: 'modify', text: 'Modify Order' }
-      ],
-      selectedOption: 'Track Order'
-    },
-    {
-      id: '5',
-      type: 'text',
-      content: 'The tracking shows it\'s delayed. This is really frustrating!',
-      sender: 'customer',
-      timestamp: '9:48 AM',
-      isRead: true
-    },
-    {
-      id: '6',
-      type: 'text',
-      content: 'I understand your frustration. Let me connect you with our support team who can help resolve this and potentially offer compensation.',
-      sender: 'agent',
-      timestamp: '10:23 AM',
-      isRead: true
+export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }, ref) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Load initial messages
+  useEffect(() => {
+    if (!conversationId) return;
+    setLoading(true);
+    authFetch(`http://localhost:3001/api/chat/messages/${conversationId}`)
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          const loadedMessages = (data.messages || []).map((msg: any, idx: number) => ({
+            id: `${msg.timestamp}_${idx}`, // Use timestamp + index for unique ID
+            type: msg.type || 'text',
+            content: msg.content,
+            sender: msg.sender === 'user' ? 'customer' : msg.sender,
+            timestamp: new Date(msg.timestamp).toLocaleTimeString(),
+            isRead: msg.status === 'read',
+            buttons: msg.buttons,
+            imageUrl: msg.imageUrl,
+            quickReplies: msg.quickReplies,
+            selectedOption: msg.selectedOption,
+          }));
+          setMessages(loadedMessages);
+          setIsInitialized(true);
+          console.log(`📚 Loaded ${loadedMessages.length} initial messages`);
+        }
+      })
+      .catch(error => {
+        console.error('Error loading messages:', error);
+      })
+      .finally(() => setLoading(false));
+  }, [conversationId]);
+
+  // Socket.IO connection for real-time updates
+  useEffect(() => {
+    if (!conversationId || !isInitialized) return;
+    
+    const token = getAccessToken();
+    if (!token) return;
+
+    const socket = io('http://localhost:3001', {
+      auth: { token },
+    });
+    socketRef.current = socket;
+
+    console.log(`🔌 Connecting to chat service for conversation: ${conversationId}`);
+
+    // Join conversation room
+    socket.emit('join_conversation', { conversation_id: conversationId });
+
+    // Listen for new messages
+    socket.on('chat_message', (data) => {
+      console.log(`📨 Received chat message:`, data);
+      if (data.conversation_id === conversationId) {
+        const newMessage: Message = {
+          id: `${data.message.timestamp}_${Date.now()}`, // Unique ID for real-time messages
+          type: data.message.type || 'text',
+          content: data.message.content,
+          sender: data.message.sender === 'user' ? 'customer' : data.message.sender,
+          timestamp: new Date(data.message.timestamp).toLocaleTimeString(),
+          isRead: data.message.status === 'read',
+          buttons: data.message.buttons,
+          imageUrl: data.message.imageUrl,
+          quickReplies: data.message.quickReplies,
+          selectedOption: data.message.selectedOption,
+        };
+        
+        console.log(`📝 Adding new message to chat:`, newMessage);
+        
+        // Check if message already exists to prevent duplicates
+        setMessages(prev => {
+          const messageExists = prev.some(msg => 
+            msg.content === newMessage.content && 
+            msg.sender === newMessage.sender &&
+            Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000 // Within 5 seconds
+          );
+          
+          if (messageExists) {
+            console.log(`⚠️ Message already exists, skipping duplicate`);
+            return prev;
+          }
+          
+          return [...prev, newMessage];
+        });
+      }
+    });
+
+    socket.on('connect', () => {
+      console.log(`✅ Connected to chat service`);
+    });
+
+    socket.on('disconnect', () => {
+      console.log(`❌ Disconnected from chat service`);
+    });
+
+    socket.on('error', (error) => {
+      console.error(`❌ Socket error:`, error);
+    });
+
+    return () => {
+      console.log(`🔌 Disconnecting from chat service`);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [conversationId, isInitialized]);
+
+  // Improved autoscroll: use a ref and scrollIntoView for the last message
+  const lastMessageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (lastMessageRef.current) {
+      lastMessageRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  ];
+  }, [messages, conversationId, isInitialized]);
+
+  useImperativeHandle(ref, () => ({
+    scrollToBottom: () => {
+      if (lastMessageRef.current) {
+        lastMessageRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    },
+  }));
 
   return (
-    <ScrollArea className="flex-1 p-4">
+    <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
       <div className="space-y-4 max-w-4xl mx-auto">
+        {loading && <div className="text-center text-gray-500">Loading...</div>}
         {messages.map((message, index) => (
-          <MessageBubble
+          <div
             key={message.id}
-            message={message}
-            isLast={index === messages.length - 1}
-          />
+            ref={index === messages.length - 1 ? lastMessageRef : undefined}
+          >
+            <MessageBubble
+              message={message}
+              isLast={index === messages.length - 1}
+            />
+          </div>
         ))}
+        {!loading && messages.length === 0 && (
+          <div className="text-center text-gray-500">No messages yet.</div>
+        )}
       </div>
     </ScrollArea>
   );
-};
+});

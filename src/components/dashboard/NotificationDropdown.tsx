@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Bell, CheckCheck, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { authFetch } from '@/lib/authFetch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '@/lib/config';
+import { useNotificationContext } from '@/contexts/NotificationContext';
 
 function formatTime(dateString: string) {
   const date = new Date(dateString);
@@ -19,56 +18,15 @@ function formatTime(dateString: string) {
 }
 
 export const NotificationDropdown: React.FC = () => {
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [markingAll, setMarkingAll] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-
-  const fetchNotifications = async () => {
-    setLoading(true);
-    try {
-      const res = await authFetch(`${API_BASE_URL}/api/notifications/?page_size=4`);
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.results);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchUnreadCount = async () => {
-    const res = await authFetch(`${API_BASE_URL}/api/notifications/?unread=true&page_size=1`);
-    if (res.ok) {
-      const data = await res.json();
-      setUnreadCount(data.count);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-    fetchUnreadCount();
-  }, []);
-
-  const markAsRead = async (id: number) => {
-    await authFetch(`${API_BASE_URL}/api/notifications/${id}/read/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_read: true })
-    });
-    fetchNotifications();
-    fetchUnreadCount();
-  };
-
-  const markAllAsRead = async () => {
-    setMarkingAll(true);
-    await authFetch(`${API_BASE_URL}/api/notifications/mark-all-read/`, { method: 'POST' });
-    fetchNotifications();
-    fetchUnreadCount();
-    setMarkingAll(false);
-  };
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    markAsRead,
+    markAllAsRead,
+  } = useNotificationContext();
 
   const handleNotificationClick = async (id: number) => {
     // Mark as read first, then navigate and close dropdown
@@ -80,6 +38,10 @@ export const NotificationDropdown: React.FC = () => {
   const handleSeeAllClick = () => {
     setIsOpen(false);
     navigate('/dashboard/notifications');
+  };
+
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead();
   };
 
   return (
@@ -97,8 +59,8 @@ export const NotificationDropdown: React.FC = () => {
       <PopoverContent align="end" className="w-96 p-0">
         <div className="p-4 flex items-center justify-between">
           <h4 className="text-sm font-medium">Notifications</h4>
-          <Button variant="ghost" size="sm" onClick={markAllAsRead} disabled={markingAll || unreadCount === 0}>
-            {markingAll ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <CheckCheck className="mr-2 h-4 w-4" />} Mark all as read
+          <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead} disabled={unreadCount === 0}>
+            <CheckCheck className="mr-2 h-4 w-4" /> Mark all as read
           </Button>
         </div>
         <Separator />

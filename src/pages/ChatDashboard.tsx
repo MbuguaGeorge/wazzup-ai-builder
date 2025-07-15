@@ -1,25 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { ConversationSidebar} from '@/components/chat/ConversationSidebar';
 import { ChatWindow } from '@/components/chat/ChatWindow';
-import { MessageCircle, Bot, Filter } from 'lucide-react';
+import { MessageCircle, Bot, Search } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
 
 const ChatDashboard = () => {
-  const [selectedBot, setSelectedBot] = useState('1');
-  const [selectedConversation, setSelectedConversation] = useState('1');
+  const [selectedBot, setSelectedBot] = useState('');
+  const [selectedConversation, setSelectedConversation] = useState('');
   const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [bots, setBots] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Mock data - in real app this would come from API
-  const bots = [
-    { id: '1', name: 'Store Assistant', status: 'active', conversations: 12 },
-    { id: '2', name: 'Customer Support Bot', status: 'active', conversations: 8 },
-    { id: '3', name: 'Sales Bot', status: 'active', conversations: 15 }
-  ];
+  useEffect(() => {
+    setLoading(true);
+    authFetch('http://localhost:8000/api/bots/')
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          const activeBots = data.filter((bot: any) => bot.whatsapp_connected && bot.status === 'active');
+          setBots(activeBots);
+          if (activeBots.length > 0 && !selectedBot) {
+            setSelectedBot(activeBots[0].id.toString());
+          }
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
-  const selectedBotData = bots.find(bot => bot.id === selectedBot);
+  const selectedBotData = bots.find(bot => bot.id.toString() === selectedBot);
 
   return (
     <div className="bg-gray-50 h-[100%] flex flex-col">
@@ -37,13 +51,10 @@ const ChatDashboard = () => {
               </SelectTrigger>
               <SelectContent>
                 {bots.map((bot) => (
-                  <SelectItem key={bot.id} value={bot.id}>
+                  <SelectItem key={bot.id} value={bot.id.toString()}>
                     <div className="flex items-center gap-2">
                       <Bot className="w-4 h-4" />
                       {bot.name}
-                      <Badge variant="secondary" className="ml-2">
-                        {bot.conversations}
-                      </Badge>
                     </div>
                   </SelectItem>
                 ))}
@@ -57,14 +68,16 @@ const ChatDashboard = () => {
       <div className="flex flex-1 min-h-0">
         <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
           <div className="p-4 border-b">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-900">
-                {selectedBotData?.name} Conversations
-              </h2>
-              <Button variant="outline" size="sm">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-              </Button>
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search conversations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
             <Tabs value={filter} onValueChange={setFilter} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
@@ -78,6 +91,7 @@ const ChatDashboard = () => {
             <ConversationSidebar 
               botId={selectedBot}
               filter={filter}
+              searchQuery={searchQuery}
               selectedConversation={selectedConversation}
               onSelectConversation={setSelectedConversation}
             />
@@ -101,7 +115,7 @@ const ChatDashboard = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 export default ChatDashboard;

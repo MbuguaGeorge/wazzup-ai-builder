@@ -16,6 +16,7 @@ import Notifications from "./pages/Notifications";
 import DashboardLayout from "./pages/DashboardLayout";
 import ChatDashboard from "./pages/ChatDashboard";
 import BotSettingsPage from './pages/BotSettingsPage';
+import { NotificationProvider } from "@/contexts/NotificationContext";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <NotificationProvider>
       <Router>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -52,6 +54,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
+      </NotificationProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

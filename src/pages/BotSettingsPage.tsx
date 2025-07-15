@@ -32,7 +32,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
   const [saving, setSaving] = useState(false);
   const [savingBotName, setSavingBotName] = useState(false);
   const [savingFallback, setSavingFallback] = useState(false);
-
+  
   // Bot Information
   const [botName, setBotName] = useState('Store Assistant');
   const [originalBotName, setOriginalBotName] = useState('Store Assistant');
@@ -111,7 +111,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
             // Connection successful, stop polling and refresh data
             clearInterval(interval);
             setPollingConnection(false);
-            setIsConnected(true);
+    setIsConnected(true);
             await fetchBotAndWABA();
           }
         }
@@ -161,7 +161,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
         method: 'POST',
       });
       if (response.ok) {
-        setIsConnected(false);
+    setIsConnected(false);
         setConnectionData({});
         if (onBotUpdated) onBotUpdated();
       } else {
@@ -246,7 +246,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
         </div>
       </div>
     );
-  }
+    }
 
   return (
     <TooltipProvider>
@@ -275,9 +275,9 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Bot Information</h2>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="botName">Bot Name</Label>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="botName">Bot Name</Label>
                   <div className="flex gap-2 mt-1">
                     <Input 
                       id="botName"
@@ -296,7 +296,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
                       ) : (
                         <Save className="w-4 h-4" />
                       )}
-                    </Button>
+                      </Button>
                   </div>
                 </div>
               </div>
@@ -306,26 +306,26 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
           {/* WhatsApp Integration */}
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">WhatsApp Integration</h2>
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                {isConnected ? (
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-red-500" />
-                )}
-                <div>
-                  <p className="font-medium">Connection Status</p>
-                  <p className="text-sm text-gray-600">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  {isConnected ? (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-500" />
+                  )}
+                  <div>
+                    <p className="font-medium">Connection Status</p>
+                    <p className="text-sm text-gray-600">
                     {isConnected ? `Connected to WhatsApp Business${connectionData.businessName ? `: ${connectionData.businessName}` : ''}` : 'Not Connected'}
-                  </p>
+                    </p>
+                  </div>
                 </div>
+                <Badge variant={isConnected ? 'default' : 'destructive'}>
+                  {isConnected ? 'Connected' : 'Not Connected'}
+                </Badge>
               </div>
-              <Badge variant={isConnected ? 'default' : 'destructive'}>
-                {isConnected ? 'Connected' : 'Not Connected'}
-              </Badge>
-            </div>
 
-            {!isConnected && (
+              {!isConnected && (
               <Button 
                 onClick={handleConnectWhatsApp} 
                 className="w-full" 
@@ -340,56 +340,56 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
                 ) : (
                   'Connect to WhatsApp via Meta'
                 )}
-              </Button>
-            )}
+                </Button>
+              )}
 
-            {isConnected && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Phone Number</Label>
-                    <Input 
+              {isConnected && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Phone Number</Label>
+                      <Input 
                       value={connectionData.phoneNumber || ''} 
-                      readOnly 
+                        readOnly 
                       className="bg-gray-50 mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>Phone Number ID</Label>
-                    <Input 
+                      />
+                    </div>
+                    <div>
+                      <Label>Phone Number ID</Label>
+                      <Input 
                       value={connectionData.phoneNumberId || ''} 
-                      readOnly 
+                        readOnly 
                       className="bg-gray-50 mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>WhatsApp Business Account ID</Label>
-                    <Input 
+                      />
+                    </div>
+                    <div>
+                      <Label>WhatsApp Business Account ID</Label>
+                      <Input 
                       value={connectionData.wabaId || ''} 
-                      readOnly 
+                        readOnly 
                       className="bg-gray-50 mt-1"
-                    />
+                      />
                   </div>
                   <div>
                     <Label>Business Name</Label>
-                    <Input 
+                      <Input 
                       value={connectionData.businessName || ''} 
-                      readOnly 
+                        readOnly 
                       className="bg-gray-50 mt-1"
                     />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
 
           {/* Bot Behavior Settings */}
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Bot Behavior</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="fallback">Fallback Message</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="fallback">Fallback Message</Label>
                   <div className="space-y-2">
                     <Textarea 
                       id="fallback"
@@ -417,56 +417,56 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
                       )}
                     </Button>
                   </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="language">Default Language</Label>
-                  <select 
-                    id="language"
-                    value={defaultLanguage}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="language">Default Language</Label>
+                    <select 
+                      id="language"
+                      value={defaultLanguage}
                     onChange={(e) => {
                       setDefaultLanguage(e.target.value);
                       handleAutoSave('defaultLanguage', e.target.value);
                     }}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
-                  >
-                    <option value="en">English</option>
-                    <option value="es">Spanish</option>
-                    <option value="fr">French</option>
-                    <option value="de">German</option>
-                    <option value="pt">Portuguese</option>
-                  </select>
-                </div>
+                    >
+                      <option value="en">English</option>
+                      <option value="es">Spanish</option>
+                      <option value="fr">French</option>
+                      <option value="de">German</option>
+                      <option value="pt">Portuguese</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <select 
-                    id="timezone"
-                    value={timezone}
+                  <div>
+                    <Label htmlFor="timezone">Timezone</Label>
+                    <select 
+                      id="timezone"
+                      value={timezone}
                     onChange={(e) => {
                       setTimezone(e.target.value);
                       handleAutoSave('timezone', e.target.value);
                     }}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
-                  >
-                    <option value="UTC">UTC</option>
-                    <option value="America/New_York">Eastern Time</option>
-                    <option value="America/Chicago">Central Time</option>
-                    <option value="America/Denver">Mountain Time</option>
-                    <option value="America/Los_Angeles">Pacific Time</option>
-                    <option value="Europe/London">London</option>
-                    <option value="Europe/Paris">Paris</option>
-                  </select>
-                </div>
+                    >
+                      <option value="UTC">UTC</option>
+                      <option value="America/New_York">Eastern Time</option>
+                      <option value="America/Chicago">Central Time</option>
+                      <option value="America/Denver">Mountain Time</option>
+                      <option value="America/Los_Angeles">Pacific Time</option>
+                      <option value="Europe/London">London</option>
+                      <option value="Europe/Paris">Paris</option>
+                    </select>
+                  </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Typing Indicator</p>
-                      <p className="text-sm text-gray-600">Show typing indicator when bot is responding</p>
-                    </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Typing Indicator</p>
+                        <p className="text-sm text-gray-600">Show typing indicator when bot is responding</p>
+                      </div>
                     <Switch 
                       checked={typingIndicator} 
                       onCheckedChange={(checked) => {
@@ -474,13 +474,13 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
                         handleAutoSave('typingIndicator', checked);
                       }} 
                     />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Read Receipts</p>
-                      <p className="text-sm text-gray-600">Send read receipts for customer messages</p>
                     </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Read Receipts</p>
+                        <p className="text-sm text-gray-600">Send read receipts for customer messages</p>
+                      </div>
                     <Switch 
                       checked={readReceipts} 
                       onCheckedChange={(checked) => {

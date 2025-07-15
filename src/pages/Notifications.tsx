@@ -5,8 +5,7 @@ import { Bell, AlertTriangle, XCircle, CheckCircle, Info } from "lucide-react";
 import React, { useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { useLocation } from 'react-router-dom';
-import { authFetch } from '@/lib/authFetch';
-import { API_BASE_URL } from '@/lib/config';
+import { useNotificationContext } from '@/contexts/NotificationContext';
 
 const notificationTypes = {
   warning: { icon: AlertTriangle, color: "text-yellow-500", bgColor: "bg-yellow-500/10" },
@@ -35,47 +34,25 @@ function useQuery() {
 }
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [markingAll, setMarkingAll] = useState(false);
   const query = useQuery();
   const highlightId = query.get('id');
 
-  const fetchNotifications = async () => {
-    setLoading(true);
-    try {
-      const res = await authFetch(`${API_BASE_URL}/api/notifications/?page_size=50`);
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.results);
-      } else {
-        console.error('Failed to fetch notifications:', res.status, res.statusText);
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    notifications,
+    loading,
+    markAllAsRead,
+    markAsRead,
+  } = useNotificationContext();
+  const [markingAll, setMarkingAll] = React.useState(false);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  const markAllAsRead = async () => {
+  const handleMarkAllAsRead = async () => {
     setMarkingAll(true);
-    await authFetch(`${API_BASE_URL}/api/notifications/mark-all-read/`, { method: 'POST' });
-    fetchNotifications();
+    await markAllAsRead();
     setMarkingAll(false);
   };
 
-  const markAsRead = async (id: number) => {
-    await authFetch(`${API_BASE_URL}/api/notifications/${id}/read/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_read: true })
-    });
-    fetchNotifications();
+  const handleMarkAsRead = async (id: number) => {
+    await markAsRead(id);
   };
 
   return (
@@ -85,7 +62,7 @@ const Notifications = () => {
           <h1 className="text-2xl font-bold">Notifications</h1>
           <p className="text-muted-foreground">Stay updated with your bot activities</p>
         </div>
-        <Button variant="outline" onClick={markAllAsRead} disabled={markingAll}>{markingAll ? 'Marking...' : 'Mark All as Read'}</Button>
+        <Button variant="outline" onClick={handleMarkAllAsRead} disabled={markingAll}>{markingAll ? 'Marking...' : 'Mark All as Read'}</Button>
       </div>
 
       <div className="space-y-4">
@@ -109,7 +86,7 @@ const Notifications = () => {
                   !notification.is_read && 'bg-accent',
                   isHighlighted && 'ring-2 ring-primary/80 ring-offset-2'
                 )}
-                onClick={() => !notification.is_read && markAsRead(notification.id)}
+                onClick={() => !notification.is_read && handleMarkAsRead(notification.id)}
                 tabIndex={0}
                 role="button"
                 aria-label={notification.title}
