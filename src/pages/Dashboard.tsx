@@ -64,6 +64,7 @@ const Dashboard = () => {
   const [botToInteract, setBotToInteract] = useState<Bot | null>(null);
   const [settingsBotId, setSettingsBotId] = useState<string | null>(null);
   const [botStats, setBotStats] = useState({ total_bots: 0, active_bots: 0 });
+  const [botAnalytics, setBotAnalytics] = useState<any>({});
 
   // Fetch bots and stats on mount
   useEffect(() => {
@@ -79,6 +80,23 @@ const Dashboard = () => {
     }
     fetchStats();
   }, []);
+
+  // Fetch per-bot analytics from Node.js
+  useEffect(() => {
+    async function fetchBotAnalytics() {
+      const analytics: any = {};
+      await Promise.all(bots.map(async (bot) => {
+        try {
+          const res = await authFetch(`http://localhost:3001/api/chat/stats/${bot.id}`);
+          if (res.ok) {
+            analytics[bot.id] = await res.json();
+          }
+        } catch {}
+      }));
+      setBotAnalytics(analytics);
+    }
+    if (bots.length > 0) fetchBotAnalytics();
+  }, [bots]);
 
   useEffect(() => {
     document.title = 'wozza | Dashboard';
@@ -193,10 +211,47 @@ const Dashboard = () => {
   };
 
 
+  // Aggregate analytics for all bots
+  const totalMessagesToday = Object.values(botAnalytics).reduce((sum: number, a: any) => sum + (a?.messagesToday || 0), 0);
+  const messagesChangeSum = Object.values(botAnalytics).reduce((sum: number, a: any) => {
+    let val = 0;
+    if (typeof a?.messagesTodayChange === 'string') {
+      const parsed = parseFloat(a.messagesTodayChange);
+      val = isNaN(parsed) ? 0 : parsed;
+    }
+    return sum + val;
+  }, 0) as number;
+  const analyticsCount: number = Object.values(botAnalytics).length;
+  const avgMessagesChange = analyticsCount > 0
+    ? (messagesChangeSum / analyticsCount).toFixed(0)
+    : '0';
+  const successRateSum = Object.values(botAnalytics).reduce((sum: number, a: any) => {
+    let val = 0;
+    if (typeof a?.successRate === 'string') {
+      const parsed = parseFloat(a.successRate);
+      val = isNaN(parsed) ? 0 : parsed;
+    }
+    return sum + val;
+  }, 0) as number;
+  const avgSuccessRate = analyticsCount > 0
+    ? (successRateSum / analyticsCount).toFixed(0)
+    : '100';
+  const successChangeSum = Object.values(botAnalytics).reduce((sum: number, a: any) => {
+    let val = 0;
+    if (typeof a?.successRateChange === 'string') {
+      const parsed = parseFloat(a.successRateChange);
+      val = isNaN(parsed) ? 0 : parsed;
+    }
+    return sum + val;
+  }, 0) as number;
+  const avgSuccessChange = analyticsCount > 0
+    ? (successChangeSum / analyticsCount).toFixed(0)
+    : '0';
+
   const analyticsData = [
     {
       title: 'Total Bots',
-      value: botStats.total_bots,
+      value: String(botStats.total_bots),
       change: '+1 from last month',
       icon: Bot,
       color: 'text-blue-500',
@@ -204,7 +259,7 @@ const Dashboard = () => {
     },
     {
       title: 'Active Bots',
-      value: botStats.active_bots,
+      value: String(botStats.active_bots),
       change: 'Currently running',
       icon: Users,
       color: 'text-green-500',
@@ -212,16 +267,16 @@ const Dashboard = () => {
     },
     {
       title: 'Messages Today',
-      value: '326',
-      change: '+12% from yesterday',
+      value: String(totalMessagesToday),
+      change: `${parseFloat(avgMessagesChange) > 0 ? '+' : ''}${avgMessagesChange}% from yesterday`,
       icon: MessageSquare,
       color: 'text-orange-500',
       bgColor: 'bg-orange-500/10',
     },
     {
       title: 'Success Rate',
-      value: '94%',
-      change: 'Last 7 days',
+      value: `${avgSuccessRate}%`,
+      change: `${parseFloat(avgSuccessChange) > 0 ? '+' : ''}${avgSuccessChange}% from prev 7d`,
       icon: BarChart2,
       color: 'text-purple-500',
       bgColor: 'bg-purple-500/10',

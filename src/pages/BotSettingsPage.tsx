@@ -11,6 +11,7 @@ import { ArrowLeft, CheckCircle, XCircle, Clock, Info, Trash2, Unlink, TestTube,
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { authFetch } from '@/lib/authFetch';
 
 const API_BASE_URL = 'http://localhost:8000';
@@ -239,14 +240,17 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
-          <p className="text-gray-600">Loading bot settings...</p>
-        </div>
+      <div className="p-8">
+        <Skeleton className="h-8 w-1/2 mb-4" />
+        <Skeleton className="h-6 w-1/3 mb-2" />
+        <Skeleton className="h-10 w-full mb-4" />
+        <Skeleton className="h-6 w-1/4 mb-2" />
+        <Skeleton className="h-10 w-full mb-4" />
+        <Skeleton className="h-6 w-1/4 mb-2" />
+        <Skeleton className="h-10 w-full mb-4" />
       </div>
     );
-    }
+  }
 
   return (
     <TooltipProvider>

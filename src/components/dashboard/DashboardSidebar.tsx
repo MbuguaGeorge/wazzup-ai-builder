@@ -6,13 +6,13 @@ import {
   CreditCard,
   LayoutDashboard,
   LogOut,
-  Settings,
   BarChart,
   FileCode,
   Bell,
   MessageCircle,
   ChevronLeft,
   ChevronRight,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import logo from '@/images/wozza.png';

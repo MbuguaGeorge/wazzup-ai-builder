@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { useLocation } from 'react-router-dom';
 import { useNotificationContext } from '@/contexts/NotificationContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const notificationTypes = {
   warning: { icon: AlertTriangle, color: "text-yellow-500", bgColor: "bg-yellow-500/10" },
@@ -67,7 +68,11 @@ const Notifications = () => {
 
       <div className="space-y-4">
         {loading ? (
-          <div className="text-center py-12 border rounded-lg">Loading...</div>
+          <div className="space-y-4">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
         ) : notifications.length === 0 ? (
           <div className="text-center py-12 border rounded-lg">
             <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

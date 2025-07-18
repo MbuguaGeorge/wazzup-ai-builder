@@ -31,6 +31,10 @@ const LoginForm = () => {
       const data = await response.json();
       if (response.ok && data.token) {
         setTokens(data.token, data.refresh);
+        // Store user data in localStorage (fix)
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
         navigate('/dashboard');
       } else {
         setError(data.error || 'Login failed. Please check your credentials.');

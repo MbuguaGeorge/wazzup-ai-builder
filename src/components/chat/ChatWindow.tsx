@@ -10,6 +10,7 @@ import { User, Bot, Phone, MoreVertical, FileText, UserCheck } from 'lucide-reac
 import { cn } from '@/lib/utils';
 import { authFetch } from '@/lib/authFetch';
 import { io, Socket } from 'socket.io-client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ChatWindowProps {
   conversationId: string;
@@ -23,6 +24,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   const [handoffActive, setHandoffActive] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const messageListRef = useRef<any>(null);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [noteInput, setNoteInput] = useState('');
+  const [notesLoading, setNotesLoading] = useState(false);
+  const MAX_WORDS = 30;
 
   // Scroll to bottom when chat is opened or message is sent
   const scrollToBottom = () => {
@@ -78,6 +83,45 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
       socketRef.current = null;
     };
   }, [conversationId]);
+
+  // Fetch notes for this conversation
+  useEffect(() => {
+    if (!conversationId) return;
+    setNotesLoading(true);
+    authFetch(`http://localhost:3001/api/chat/conversations/${conversationId}/notes`)
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          setNotes(data.notes || []);
+        }
+      })
+      .finally(() => setNotesLoading(false));
+  }, [conversationId]);
+
+  // Save note
+  const handleSaveNote = async () => {
+    const trimmed = noteInput.trim();
+    if (!trimmed) return;
+    if (trimmed.split(/\s+/).length > MAX_WORDS) return;
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const author = user.email || 'Unknown';
+    await authFetch(`http://localhost:3001/api/chat/conversations/${conversationId}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: trimmed, author }),
+    });
+    setNoteInput('');
+    // Refresh notes
+    setNotesLoading(true);
+    authFetch(`http://localhost:3001/api/chat/conversations/${conversationId}/notes`)
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          setNotes(data.notes || []);
+        }
+      })
+      .finally(() => setNotesLoading(false));
+  };
 
   const handleToggleHandoff = async () => {
     const newActive = !handoffActive;
@@ -166,31 +210,48 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
         {showNotes && (
           <div className="w-80 border-l border-gray-200 bg-gray-50 p-4">
             <h3 className="font-semibold text-gray-900 mb-4">Internal Notes</h3>
+            {/* Notes List */}
+            {notesLoading ? (
+              <div className="space-y-2 mb-4">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2 mb-4">
+                {notes.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No notes yet.</div>
+                ) : (
+                  notes.slice().reverse().map((note, idx) => (
+                    <div key={idx} className="bg-accent rounded p-2 text-xs flex flex-col">
+                      {/* <div className="font-medium text-foreground mb-1">{note.author}</div> */}
+                      <div className="mb-1">{note.content}</div>
+                      <div className="text-muted-foreground text-[10px]">{new Date(note.timestamp).toLocaleString()}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+            {/* Note Input at the bottom */}
+            <div className="gap-2 mt-2">
             <Textarea
-              value={internalNotes}
-              onChange={(e) => setInternalNotes(e.target.value)}
-              placeholder="Add internal notes for your team..."
               className="min-h-32 mb-4"
-            />
-            <Button size="sm" className="w-full">
+                placeholder={`Add internal notes (max ${MAX_WORDS} words)`}
+                value={noteInput}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val.trim().split(/\s+/).length <= MAX_WORDS) setNoteInput(val);
+                }}
+                maxLength={300}
+              />
+              <Button
+                className="bg-primary text-white rounded px-3 py-1 text-sm w-full"
+                onClick={handleSaveNote}
+                disabled={!noteInput.trim() || noteInput.trim().split(/\s+/).length > MAX_WORDS}
+                size='sm'
+              >
               Save Notes
             </Button>
-            <div className="mt-6">
-              <h4 className="font-medium text-gray-900 mb-2">Conversation Info</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <Badge variant="destructive">{handoffActive ? 'Handed Off' : 'Active'}</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Started:</span>
-                  <span>{conversation ? new Date(conversation.createdAt).toLocaleString() : ''}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Messages:</span>
-                  <span>{conversation?.messages?.length || 0} total</span>
-                </div>
-              </div>
             </div>
           </div>
         )}

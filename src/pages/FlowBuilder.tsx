@@ -60,6 +60,7 @@ import { toast as useToast } from "@/components/ui/use-toast";
 import isEqual from 'lodash/isEqual';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const nodeTypes = {
   messageNode: MessageNode,
@@ -123,6 +124,7 @@ const FlowBuilder = () => {
           }
         }
       } catch (err) {}
+      setIsLoading(false);
     }
     fetchFlows();
   }, [botId]);

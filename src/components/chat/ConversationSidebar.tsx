@@ -5,6 +5,7 @@ import { authFetch } from '@/lib/authFetch';
 import { getAccessToken } from '@/lib/auth';
 import { io, Socket } from 'socket.io-client';
 import { UserCheck } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Conversation {
   id: string;
@@ -80,8 +81,8 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
                 customerPhone: conv.user_id,
                 lastMessage: '',
                 timestamp: new Date(conv.updatedAt).toLocaleString(),
-                isUnread: false,
-                status: 'active',
+      isUnread: false,
+      status: 'active',
                 isHandedOff: conv.handover,
                 messageCount: conv.messages_count || 0,
                 userId: conv.user_id,
@@ -140,9 +141,9 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
               customerPhone: message.from || message.sender,
               lastMessage: message.content,
               timestamp: new Date(message.timestamp).toLocaleString(),
-              isUnread: false,
-              status: 'active',
-              isHandedOff: false,
+      isUnread: false,
+      status: 'active',
+      isHandedOff: false,
               messageCount: 1,
               userId: message.from || message.sender,
             };
@@ -231,16 +232,22 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   return (
     <ScrollArea className="flex-1">
       <div className="divide-y">
-        {loading && <div className="p-4 text-center text-gray-500">Loading...</div>}
+        {loading && (
+          <div className="p-4">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full mb-2" />
+            ))}
+          </div>
+        )}
         {filteredConversations.map((conv) => (
-          <div
+        <div
             key={conv.id}
-            className={cn(
+          className={cn(
               'p-4 cursor-pointer hover:bg-gray-100',
               selectedConversation === conv.id && 'bg-blue-50'
-            )}
+          )}
             onClick={() => onSelectConversation(conv.id)}
-          >
+        >
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-gray-900 truncate flex items-center gap-1">
@@ -261,7 +268,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
             {searchQuery ? 'No conversations match your search.' : 'No conversations found.'}
           </div>
         )}
-      </div>
+        </div>
     </ScrollArea>
   );
 };

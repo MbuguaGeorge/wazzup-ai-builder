@@ -4,6 +4,7 @@ import { MessageBubble } from './MessageBubble';
 import { authFetch } from '@/lib/authFetch';
 import { getAccessToken } from '@/lib/auth';
 import { io, Socket } from 'socket.io-client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Message {
   id: string;
@@ -153,16 +154,22 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
   return (
     <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
       <div className="space-y-4 max-w-4xl mx-auto">
-        {loading && <div className="text-center text-gray-500">Loading...</div>}
+        {loading && (
+          <div className="p-4">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-8 w-3/4 mb-2" />
+            ))}
+          </div>
+        )}
         {messages.map((message, index) => (
           <div
             key={message.id}
             ref={index === messages.length - 1 ? lastMessageRef : undefined}
           >
             <MessageBubble
-              message={message}
-              isLast={index === messages.length - 1}
-            />
+            message={message}
+            isLast={index === messages.length - 1}
+          />
           </div>
         ))}
         {!loading && messages.length === 0 && (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,39 +7,89 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, Settings, User, LifeBuoy, Bell, CheckCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
-import logo from '@/images/wozza.png';
 import NotificationDropdown from './NotificationDropdown';
+import { authFetch } from '@/lib/authFetch';
 
 interface DashboardHeaderProps {
   title: string;
   subtitle?: string;
 }
 
+// Random avatar options
+const AVATAR_OPTIONS = [
+  'https://images.unsplash.com/photo-1472996457855658f44?w=150&h=150&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-15070032111690a1dd72282?w=150&h=150&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-149479010875526161286?w=150&h=150&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-150064876779100dcc9943?w=150&h=150&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-14387616810336461ad8d80?w=150&h=150&fit=crop&crop=face',
+];
 
 const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   const [user, setUser] = useState({
-    name: 'John Doe',
-    email: 'john@example.com',
-    avatarUrl: '',
+    name: 'User',
+    email: '',
+    avatarUrl: AVATAR_OPTIONS[0],
   });
 
   const navigate = useNavigate();
 
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const res = await authFetch('http://localhost:8000/api/users/me/');
+        if (res.ok) {
+          const userData = await res.json();
+          setUser({
+            name: userData.full_name || 'User',
+            email: userData.email || '',
+            avatarUrl: AVATAR_OPTIONS[Math.floor(Math.random() * AVATAR_OPTIONS.length)],
+          });
+          localStorage.setItem('user', JSON.stringify(userData));
+          return;
+        }
+      } catch (e) {
+        // fallback to localStorage
+      }
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser({
+            name: parsedUser.full_name || 'User',
+            email: parsedUser.email || '',
+            avatarUrl: AVATAR_OPTIONS[Math.floor(Math.random() * AVATAR_OPTIONS.length)],
+          });
+        } catch (error) {
+          setUser({
+            name: 'User',
+            email: '',
+            avatarUrl: AVATAR_OPTIONS[0],
+          });
+        }
+      } else {
+        setUser({
+          name: 'User',
+          email: '',
+          avatarUrl: AVATAR_OPTIONS[0],
+        });
+      }
+    }
+    fetchUser();
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refresh');
+    localStorage.removeItem('user');
     navigate('/login');
+  };
+
+  const handleSupportClick = () => {
+    navigate('/dashboard/support');
   };
 
   return (
@@ -64,11 +114,7 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
               <Avatar className="h-9 w-9">
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
                 <AvatarFallback>
-                  {user.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')
-                    .toUpperCase()}
+                  <User className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -87,11 +133,7 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
               <User className="mr-2 h-4 w-4" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </DropdownMenuItem>
-              <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSupportClick}>
                 <LifeBuoy className="mr-2 h-4 w-4" />
                 Support
               </DropdownMenuItem>

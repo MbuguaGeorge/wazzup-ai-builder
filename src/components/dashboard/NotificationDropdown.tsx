@@ -66,10 +66,10 @@ export const NotificationDropdown: React.FC = () => {
         <Separator />
         <div className="max-h-96 overflow-y-auto">
           {loading ? (
-            <div className="p-4 space-y-2">
-              <Skeleton className="h-6 w-full" />
-              <Skeleton className="h-6 w-2/3" />
-              <Skeleton className="h-6 w-1/2" />
+            <div className="p-4">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-6 w-full mb-2" />
+              ))}
             </div>
           ) : notifications.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground">No notifications</div>
