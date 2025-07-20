@@ -17,6 +17,8 @@ import DashboardLayout from "./pages/DashboardLayout";
 import ChatDashboard from "./pages/ChatDashboard";
 import Support from "./pages/Support";
 import ProfileSettings from "./pages/ProfileSettings";
+import SubscriptionSuccess from "./pages/SubscriptionSuccess";
+import SubscriptionError from "./pages/SubscriptionError";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 
 const queryClient = new QueryClient();
@@ -51,6 +53,8 @@ const App = () => (
           </Route>
 
           <Route path="/flow-builder/:botId?" element={<PrivateRoute><FlowBuilder /></PrivateRoute>} />
+          <Route path="/subscription/success" element={<PrivateRoute><SubscriptionSuccess /></PrivateRoute>} />
+          <Route path="/subscription/error" element={<PrivateRoute><SubscriptionError /></PrivateRoute>} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

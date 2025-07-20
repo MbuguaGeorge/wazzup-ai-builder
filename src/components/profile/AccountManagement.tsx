@@ -3,6 +3,10 @@ import { Download, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { authFetch } from '@/lib/authFetch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +21,10 @@ import {
 
 export const AccountManagement = () => {
   const [isExporting, setIsExporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const { toast } = useToast();
 
   const handleExportData = async () => {
     setIsExporting(true);
@@ -24,13 +32,73 @@ export const AccountManagement = () => {
     setTimeout(() => {
       console.log('Exporting user data...');
       setIsExporting(false);
-      // Here you would trigger the actual download
+      toast({
+        title: "Export Initiated",
+        description: "Your data export has been initiated. You'll receive an email when it's ready.",
+      });
     }, 2000);
   };
 
-  const handleDeleteAccount = () => {
-    console.log('Initiating account deletion...');
-    // Here you would redirect to account deletion flow
+  const handleDeleteAccount = async () => {
+    if (!password.trim()) {
+      toast({
+        title: "Password Required",
+        description: "Please enter your password to confirm account deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      console.log('Attempting to delete account...');
+      const response = await authFetch('http://localhost:8000/api/delete-account/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Success response:', data);
+        toast({
+          title: "Account Deletion Scheduled",
+          description: "Your account has been scheduled for deletion and will be permanently removed in 60 days.",
+        });
+        
+        // Clear local storage and redirect to home
+        localStorage.clear();
+        window.location.href = '/';
+      } else {
+        const errorData = await response.json();
+        console.log('Error response:', errorData);
+        toast({
+          title: "Deletion Failed",
+          description: errorData.error || "Failed to delete account. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Exception during delete account:', error);
+      toast({
+        title: "Connection Error",
+        description: "Unable to connect to the server. Please check your internet connection and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setPassword('');
+      setShowDeleteModal(false);
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
   };
 
   return (
@@ -97,43 +165,75 @@ export const AccountManagement = () => {
             </ul>
           </div>
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full sm:w-auto">
-                Delete My Account
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete your account
-                  and remove all your data from our servers, including:
-                  <br /><br />
-                  • All bot configurations and chat data
-                  <br />
-                  • Account settings and preferences
-                  <br />
-                  • Billing and subscription information
-                  <br />
-                  • Analytics and usage history
-                  <br /><br />
-                  If you're sure you want to proceed, click "Delete Account" below.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={handleDeleteAccount}
-                  className="bg-destructive hover:bg-destructive/90"
-                >
-                  Delete Account
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button 
+            variant="destructive" 
+            className="w-full sm:w-auto"
+            onClick={handleDeleteClick}
+          >
+            Delete My Account
+          </Button>
         </div>
       </div>
+
+      {/* Delete Account Modal */}
+      <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Your Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your account
+              and remove all your data from our servers, including:
+              <br /><br />
+              • All bot configurations and chat data
+              <br />
+              • Account settings and preferences
+              <br />
+              • Billing and subscription information
+              <br />
+              • Analytics and usage history
+              <br /><br />
+              Your account will be scheduled for deletion and permanently removed in 60 days.
+              You can still log in during this period if you change your mind.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="delete-password" className="text-sm font-medium">
+                Enter your password to confirm deletion:
+              </Label>
+              <Input
+                id="delete-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && password.trim()) {
+                    handleDeleteAccount();
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteModal(false);
+              setPassword('');
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAccount}
+              disabled={isDeleting || !password.trim()}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Account'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

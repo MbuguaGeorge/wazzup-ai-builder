@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { User, Key, Calendar, Hash, Mail, Shield, Smartphone } from 'lucide-react';
+import { User, Key, Calendar, Smartphone, Shield, Hash, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
 
 export const AccountInformation = () => {
@@ -23,13 +24,13 @@ export const AccountInformation = () => {
     confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { toast } = useToast();
 
   // Load user data on mount
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const response = await authFetch('http://localhost:8000/api/users/me/');
+        const response = await authFetch('http://localhost:8000/api/me/');
         if (response.ok) {
           const userData = await response.json();
           setFormData({
@@ -40,10 +41,15 @@ export const AccountInformation = () => {
         }
       } catch (error) {
         console.error('Error loading user data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your profile information. Please refresh the page.",
+          variant: "destructive",
+        });
       }
     };
     loadUserData();
-  }, []);
+  }, [toast]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -55,9 +61,8 @@ export const AccountInformation = () => {
 
   const handleSave = async () => {
     setLoading(true);
-    setMessage(null);
     try {
-      const response = await authFetch('http://localhost:8000/api/users/me/', {
+      const response = await authFetch('http://localhost:8000/api/me/', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,7 +72,10 @@ export const AccountInformation = () => {
       });
       
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Profile updated successfully!' });
+        toast({
+          title: "Profile Updated",
+          description: "Your profile information has been updated successfully!",
+        });
         setIsEditing(false);
         // Update localStorage
         const userData = JSON.parse(localStorage.getItem('user') || '{}');
@@ -77,10 +85,19 @@ export const AccountInformation = () => {
           email: formData.email,
         }));
       } else {
-        setMessage({ type: 'error', text: 'Failed to update profile' });
+        const errorData = await response.json();
+        toast({
+          title: "Update Failed",
+          description: errorData.error || "Failed to update your profile. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'An error occurred while updating profile' });
+      toast({
+        title: "Connection Error",
+        description: "Unable to connect to the server. Please check your internet connection and try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -88,18 +105,25 @@ export const AccountInformation = () => {
 
   const handlePasswordSubmit = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setMessage({ type: 'error', text: 'Passwords do not match' });
+      toast({
+        title: "Password Mismatch",
+        description: "Your new passwords do not match. Please try again.",
+        variant: "destructive",
+      });
       return;
     }
     if (passwordData.newPassword.length < 8) {
-      setMessage({ type: 'error', text: 'Password must be at least 8 characters long' });
+      toast({
+        title: "Password Too Short",
+        description: "Your new password must be at least 8 characters long.",
+        variant: "destructive",
+      });
       return;
     }
 
     setLoading(true);
-    setMessage(null);
     try {
-      const response = await authFetch('http://localhost:8000/api/account/change-password/', {
+      const response = await authFetch('http://localhost:8000/api/change-password/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -109,15 +133,26 @@ export const AccountInformation = () => {
       });
       
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Password updated successfully!' });
+        toast({
+          title: "Password Updated",
+          description: "Your password has been updated successfully!",
+        });
         setShowPasswordForm(false);
         setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       } else {
         const errorData = await response.json();
-        setMessage({ type: 'error', text: errorData.error || 'Failed to update password' });
+        toast({
+          title: "Password Update Failed",
+          description: errorData.error || "Failed to update your password. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'An error occurred while updating password' });
+      toast({
+        title: "Connection Error",
+        description: "Unable to connect to the server. Please check your internet connection and try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -128,13 +163,6 @@ export const AccountInformation = () => {
 
   return (
     <div className="space-y-6">
-      {/* Alert Messages */}
-      {message && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'default'}>
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
-
       {/* Profile Information */}
       <div className="space-y-4">
         <div className="flex items-center space-x-3">
@@ -143,25 +171,25 @@ export const AccountInformation = () => {
         </div>
         
         <div className="space-y-4">
-          <div className="space-y-2">
+        <div className="space-y-2">
             <Label htmlFor="fullName">Full Name</Label>
-            <Input
+          <Input
               id="fullName"
               value={formData.fullName}
               onChange={(e) => handleInputChange('fullName', e.target.value)}
-              disabled={!isEditing}
+            disabled={!isEditing}
               placeholder="Enter your full name"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              disabled={!isEditing}
+          />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">Email Address</Label>
+        <Input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => handleInputChange('email', e.target.value)}
+          disabled={!isEditing}
               placeholder="Enter your email address"
             />
           </div>
@@ -289,7 +317,7 @@ export const AccountInformation = () => {
       <div className="space-y-4">
         <div className="flex items-center space-x-3">
           <Hash className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-medium">Account Details</h3>
+        <h3 className="text-lg font-medium">Account Details</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">

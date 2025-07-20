@@ -40,7 +40,7 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await authFetch('http://localhost:8000/api/users/me/');
+        const res = await authFetch('http://localhost:8000/api/me/');
         if (res.ok) {
           const userData = await res.json();
           setUser({

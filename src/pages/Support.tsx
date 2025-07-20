@@ -40,7 +40,6 @@ const Support = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!formData.subject || !formData.category || !formData.description) {
       toast({
         title: "Missing fields",
@@ -49,15 +48,10 @@ const Support = () => {
       });
       return;
     }
-
     setIsSubmitting(true);
-    
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
     setIsSubmitting(false);
     setIsSubmitted(true);
-    
     toast({
       title: "Support request submitted",
       description: "We'll get back to you within 24 hours.",
@@ -102,8 +96,12 @@ const Support = () => {
 
   if (isSubmitted) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold">Support</h1>
+          <p className="text-muted-foreground">Need help? We're here to assist you. Submit a support request and our team will get back to you as soon as possible.</p>
+        </div>
+        <div className="flex flex-col items-center justify-center min-h-[40vh] text-center space-y-6">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
@@ -127,14 +125,11 @@ const Support = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Get Support</h1>
-        <p className="text-muted-foreground">
-          Need help? We're here to assist you. Submit a support request and our team will get back to you as soon as possible.
-        </p>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold">Support</h1>
+        <p className="text-muted-foreground">Need help? We're here to assist you. Submit a support request and our team will get back to you as soon as possible.</p>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Form */}
         <div className="lg:col-span-2">
@@ -158,7 +153,6 @@ const Support = () => {
                     required
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
                   <Select onValueChange={(value) => handleInputChange("category", value)}>
@@ -174,7 +168,6 @@ const Support = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="description">Description *</Label>
                   <Textarea
@@ -186,7 +179,6 @@ const Support = () => {
                     required
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="file">Attachment (Optional)</Label>
                   <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
@@ -223,7 +215,6 @@ const Support = () => {
                     </div>
                   )}
                 </div>
-
                 <Button 
                   type="submit" 
                   className="w-full"
@@ -235,7 +226,6 @@ const Support = () => {
             </CardContent>
           </Card>
         </div>
-
         {/* Sidebar */}
         <div className="space-y-6">
           <Card>
@@ -263,7 +253,6 @@ const Support = () => {
               ))}
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Contact Information</CardTitle>
