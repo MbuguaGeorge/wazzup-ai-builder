@@ -8,13 +8,63 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Brain, UploadCloud, FileText, Link as LinkIcon, Trash2, Loader2 } from 'lucide-react';
 import DeleteButton from './DeleteButton';
+import { useEffect } from 'react';
+import { authFetch } from '@/lib/authFetch';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const AINode = ({ data, isConnectable, id }: NodeProps) => {
   const [newLink, setNewLink] = useState('');
+  const [googleAuth, setGoogleAuth] = useState<boolean>(false);
+  const [authChecking, setAuthChecking] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const popupRef = React.useRef<Window | null>(null);
 
   const onUpdate = data.onUpdate || (() => {});
   const onFilesChange = data.onFilesChange || (() => {});
   const onFileRemove = data.onFileRemove || (() => {});
+
+  // Listen for OAuth popup message
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.data && event.data.type === 'google_oauth_success') {
+        setGoogleAuth(true);
+        setAuthError(null);
+        if (popupRef.current) popupRef.current.close();
+      } else if (event.data && event.data.type === 'google_oauth_error') {
+        setAuthError('Google authorization failed. Please try again.');
+        setGoogleAuth(false);
+        if (popupRef.current) popupRef.current.close();
+      }
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Removed demo useEffect for auth expiration
+
+  const handleGoogleAuth = async () => {
+    setAuthChecking(true);
+    setAuthError(null);
+    try {
+      const res = await authFetch(`${API_BASE}/api/google-oauth/url/`);
+      const data = await res.json();
+      if (!data.url) throw new Error('No OAuth URL returned');
+      const width = 500, height = 600;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      const popup = window.open(
+        data.url,
+        'GoogleAuthPopup',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+      popupRef.current = popup;
+    } catch (e) {
+      setAuthError('Failed to initiate Google OAuth.');
+    } finally {
+      setAuthChecking(false);
+    }
+  };
 
   const handleAddLink = () => {
     if (newLink && !data.gdrive_links?.includes(newLink)) {
@@ -32,7 +82,6 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       onFilesChange(Array.from(event.target.files));
-      // Clear the input value to allow selecting the same file again
       event.target.value = '';
     }
   };
@@ -75,7 +124,6 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
         <div className="space-y-3 p-3 bg-secondary/50 rounded-lg">
           <Label className="font-medium text-sm">Context Documents</Label>
           <p className="text-xs text-muted-foreground -mt-2">Provide documents for the AI to reference.</p>
-          
           {/* File Upload */}
           <div className="space-y-2">
             <Label 
@@ -86,7 +134,6 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
               <span>Upload PDF Files</span>
               <Input id={`file-upload-${id}`} type="file" multiple onChange={handleFileChange} accept=".pdf" className="sr-only" />
             </Label>
-            
             <div className="space-y-1">
               {data.files?.map((file: any, index: number) => (
                 <div key={file.id || index} className="flex items-center justify-between text-xs bg-background p-1.5 rounded">
@@ -105,11 +152,23 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
             </div>
           </div>
 
-          {/* Google Drive Links */}
-          <div className="space-y-2">
+          {/* Google OAuth and Link Input */}
+          <div className="space-y-2 mt-4">
+            {!googleAuth ? (
+                <button
+                  type="button"
+                  onClick={handleGoogleAuth}
+                  disabled={authChecking}
+                  className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer p-2 rounded-md border-2 border-dashed border-muted hover:border-primary hover:text-primary transition-all w-full bg-transparent"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  <span>Connect Google for Docs/Sheets</span>
+                </button>
+            ) : (
+              <>
             <Label className="flex items-center gap-2 text-xs text-muted-foreground">
               <LinkIcon className="w-4 h-4" />
-              <span>Google Drive Links</span>
+                  <span>Paste your Google Docs or Sheets link here</span>
             </Label>
             <div className="flex gap-2">
               <Input
@@ -121,7 +180,9 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
               />
               <Button onClick={handleAddLink} size="sm" className="h-8">Add</Button>
             </div>
-            <p className="text-xs text-muted-foreground">Ensure "Anyone with the link can view".</p>
+                <p className="text-xs text-muted-foreground">
+                  Make sure the file belongs to the linked Google account. This allows the bot to access private documents without changing sharing settings.
+                </p>
             <div className="space-y-1">
               {data.gdrive_links?.map((link: string, index: number) => (
                 <div key={index} className="flex items-center justify-between text-xs bg-background p-1.5 rounded">
@@ -132,6 +193,9 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
                 </div>
               ))}
             </div>
+              </>
+            )}
+            {authError && <p className="text-xs text-red-500">{authError}</p>}
           </div>
         </div>
 

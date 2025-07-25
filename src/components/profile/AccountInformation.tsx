@@ -8,6 +8,22 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+dayjs.extend(relativeTime);
+
+function getPasswordLastChangedDisplay(): string {
+  const lastChanged = localStorage.getItem('password_last_changed');
+  if (!lastChanged) return '1 hour ago';
+  const last = dayjs(lastChanged);
+  const now = dayjs();
+  const diffDays = now.diff(last, 'day');
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  const diffWeeks = now.diff(last, 'week');
+  if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks === 1 ? '' : 's'} ago`;
+  const diffMonths = now.diff(last, 'month');
+  return `${diffMonths} month${diffMonths === 1 ? '' : 's'} ago`;
+}
 
 export const AccountInformation = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -139,6 +155,8 @@ export const AccountInformation = () => {
         });
         setShowPasswordForm(false);
         setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        // Record password change date
+        localStorage.setItem('password_last_changed', new Date().toISOString());
       } else {
         const errorData = await response.json();
         toast({
@@ -227,7 +245,7 @@ export const AccountInformation = () => {
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
               <p className="font-medium">Password</p>
-              <p className="text-sm text-muted-foreground">Last changed 3 months ago</p>
+              <p className="text-sm text-muted-foreground">Last changed {getPasswordLastChangedDisplay()}</p>
             </div>
             <Button variant="outline" onClick={() => setShowPasswordForm(true)}>
               Change Password
