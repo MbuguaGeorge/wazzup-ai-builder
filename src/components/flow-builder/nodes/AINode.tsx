@@ -41,6 +41,19 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  useEffect(() => {
+    async function checkGoogleStatus() {
+      try {
+        const res = await authFetch(`${API_BASE}/api/google-oauth/status/`);
+        const result = await res.json();
+        setGoogleAuth(!!result.authorized);
+      } catch (e) {
+        setGoogleAuth(false);
+      }
+    }
+    checkGoogleStatus();
+  }, []);
+
   // Removed demo useEffect for auth expiration
 
   const handleGoogleAuth = async () => {
@@ -66,11 +79,19 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
     }
   };
 
-  const handleAddLink = () => {
+  const handleAddLink = async () => {
     if (newLink && !data.gdrive_links?.includes(newLink)) {
       const updatedLinks = [...(data.gdrive_links || []), newLink];
       onUpdate({ gdrive_links: updatedLinks });
       setNewLink('');
+
+      await authFetch(`${API_BASE}/api/upsert-gdrive-link/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link: newLink, flow_id: data.flow_id }),
+        credentials: 'include'
+      });
+      console.log(`Adding link: ${newLink} to flow ID: ${data.flow_id}`);
     }
   };
 

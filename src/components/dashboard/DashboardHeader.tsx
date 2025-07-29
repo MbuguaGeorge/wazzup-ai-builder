@@ -128,11 +128,6 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
                 </p>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleSupportClick}>
                 <LifeBuoy className="mr-2 h-4 w-4" />
                 Support

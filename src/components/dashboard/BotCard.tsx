@@ -23,7 +23,7 @@ import {
   AlertCircle,
   GitBranch,
   Check,
-  BarChart2,
+  MessageCircle,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -144,10 +144,34 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename,
               <Copy className="mr-2 h-4 w-4" />
               Duplicate Bot
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate(`/bot/${bot.id}/analytics`)}>
-              <BarChart2 className="mr-2 h-4 w-4" />
-              View Analytics
-            </DropdownMenuItem>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (bot.whatsapp_connected && bot.status === 'active') {
+                          navigate(`/dashboard/chat-management?botId=${bot.id}`);
+                        }
+                      }}
+                      disabled={!bot.whatsapp_connected || bot.status !== 'active'}
+                      className={!bot.whatsapp_connected || bot.status !== 'active' ? 'opacity-50 cursor-not-allowed' : ''}
+                    >
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      View Messages
+                    </DropdownMenuItem>
+                  </span>
+                </TooltipTrigger>
+                {(!bot.whatsapp_connected || bot.status !== 'active') && (
+                  <TooltipContent>
+                    { !bot.whatsapp_connected
+                      ? "Bot is not connected to WhatsApp. Please connect to view messages."
+                      : "Bot is not active. Please activate your bot to view messages."
+                    }
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"

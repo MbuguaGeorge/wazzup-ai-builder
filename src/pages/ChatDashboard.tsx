@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useLocation } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -16,6 +15,8 @@ const ChatDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [bots, setBots] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const location = useLocation();
+
 
   useEffect(() => {
     setLoading(true);
@@ -25,13 +26,21 @@ const ChatDashboard = () => {
           const data = await res.json();
           const activeBots = data.filter((bot: any) => bot.whatsapp_connected && bot.status === 'active');
           setBots(activeBots);
-          if (activeBots.length > 0 && !selectedBot) {
+
+          // Get botId from URL query string
+          const params = new URLSearchParams(location.search);
+          const botIdFromUrl = params.get('botId');
+
+          if (botIdFromUrl && activeBots.some(bot => bot.id.toString() === botIdFromUrl)) {
+            setSelectedBot(botIdFromUrl);
+          } else if (activeBots.length > 0 && !selectedBot) {
             setSelectedBot(activeBots[0].id.toString());
           }
         }
       })
       .finally(() => setLoading(false));
-  }, []);
+    // eslint-disable-next-line
+  }, [location.search]);
 
   const selectedBotData = bots.find(bot => bot.id.toString() === selectedBot);
 

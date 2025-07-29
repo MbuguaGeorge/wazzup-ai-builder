@@ -451,6 +451,7 @@ const FlowBuilder = () => {
             ...baseNode,
             data: {
               ...baseNode.data,
+              flow_id: selectedFlow?.id,
               systemPrompt: '',
               model: 'gpt-4o',
               template: 'AI Response: {openai_response}',
@@ -583,6 +584,7 @@ const FlowBuilder = () => {
         node.data.onUpdate = (data) => updateNodeData(nodeId, data);
         node.data.onFilesChange = (files) => handleFileChange(nodeId, files);
         node.data.onFileRemove = (file) => handleFileRemove(nodeId, file);
+        node.data.flow_id = selectedFlow?.id;
         return node;
       });
       const initialEdges = deepClone(flowData.edges);
