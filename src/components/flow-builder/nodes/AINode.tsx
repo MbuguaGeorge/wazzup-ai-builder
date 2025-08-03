@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Brain, UploadCloud, FileText, Link as LinkIcon, Trash2, Loader2 } from 'lucide-react';
+import { Brain, UploadCloud, FileText, Link as LinkIcon, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import DeleteButton from './DeleteButton';
 import { useEffect } from 'react';
 import { authFetch } from '@/lib/authFetch';
@@ -18,11 +18,45 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
   const [googleAuth, setGoogleAuth] = useState<boolean>(false);
   const [authChecking, setAuthChecking] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [trialStatus, setTrialStatus] = useState<{
+    is_trial_user: boolean;
+    trial_restrictions?: {
+      allowed_models: string[];
+      restricted_models: string[];
+    };
+  } | null>(null);
   const popupRef = React.useRef<Window | null>(null);
 
   const onUpdate = data.onUpdate || (() => {});
   const onFilesChange = data.onFilesChange || (() => {});
   const onFileRemove = data.onFileRemove || (() => {});
+
+  // Fetch trial status
+  useEffect(() => {
+    async function fetchTrialStatus() {
+      try {
+        const response = await authFetch(`${API_BASE}/api/subscription/credits/balance/`);
+        if (response.ok) {
+          const data = await response.json();
+          setTrialStatus({
+            is_trial_user: data.is_trial_user || false,
+            trial_restrictions: data.trial_restrictions
+          });
+          
+          // If trial user and current model is not allowed, set to gpt-4o-mini
+          if (data.is_trial_user && data.trial_restrictions) {
+            const allowedModels = data.trial_restrictions.allowed_models || ['gpt-4o-mini'];
+            if (!allowedModels.includes(data.model)) {
+              onUpdate({ model: 'gpt-4o-mini' });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching trial status:', error);
+      }
+    }
+    fetchTrialStatus();
+  }, []);
 
   // Listen for OAuth popup message
   useEffect(() => {
@@ -124,12 +158,60 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
           <Select value={data.model} onValueChange={(value) => onUpdate({ model: value })}>
             <SelectTrigger><SelectValue placeholder="Select AI model" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="gpt-4o">GPT-4o (smart, expensive, slow)</SelectItem>
-              <SelectItem value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet (balanced)</SelectItem>
-              <SelectItem value="claude-3-5-haiku-20240307">Claude 3.5 Haiku (cheaper, faster)</SelectItem>
-              <SelectItem value="gpt-o4-mini">GPT-4o-mini (faster, cheaper)</SelectItem>
+              <SelectItem value="gpt-4o-mini">GPT-4o-mini</SelectItem>
+              <SelectItem 
+                value="gpt-4o"
+                disabled={trialStatus?.is_trial_user}
+                className={trialStatus?.is_trial_user ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                GPT-4o
+                {trialStatus?.is_trial_user && <span className="text-xs text-muted-foreground ml-2">(Upgrade)</span>}
+              </SelectItem>
+              <SelectItem 
+                value="claude-3.5-sonnet" 
+                disabled={trialStatus?.is_trial_user}
+                className={trialStatus?.is_trial_user ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                Claude 3.5 Sonnet
+                {trialStatus?.is_trial_user && <span className="text-xs text-muted-foreground ml-2">(Upgrade)</span>}
+              </SelectItem>
+              <SelectItem 
+                value="claude-3-haiku" 
+                disabled={trialStatus?.is_trial_user}
+                className={trialStatus?.is_trial_user ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                Claude 3 Haiku
+                {trialStatus?.is_trial_user && <span className="text-xs text-muted-foreground ml-2">(Upgrade)</span>}
+              </SelectItem>
+              <SelectItem 
+                value="gemini-2.5-pro" 
+                disabled={trialStatus?.is_trial_user}
+                className={trialStatus?.is_trial_user ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                Gemini 2.5 Pro
+                {trialStatus?.is_trial_user && <span className="text-xs text-muted-foreground ml-2">(Upgrade)</span>}
+              </SelectItem>
+              <SelectItem 
+                value="gemini-2.5-flash" 
+                disabled={trialStatus?.is_trial_user}
+                className={trialStatus?.is_trial_user ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                Gemini 2.5 Flash
+                {trialStatus?.is_trial_user && <span className="text-xs text-muted-foreground ml-2">(Upgrade)</span>}
+              </SelectItem>
             </SelectContent>
           </Select>
+          
+          {/* Trial restriction warning */}
+          {trialStatus?.is_trial_user && trialStatus.trial_restrictions && (
+            <div className="flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+              <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+              <div className="text-xs text-yellow-700 dark:text-yellow-300">
+                <p className="font-medium">Trial Mode</p>
+                <p>Only GPT-4o-mini is available during trial. Upgrade to access all models.</p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           <Label>System Prompt</Label>

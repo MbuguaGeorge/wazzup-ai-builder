@@ -68,6 +68,13 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
     const token = getAccessToken();
     if (!token) return;
 
+    // Clean up existing socket connection
+    if (socketRef.current) {
+      console.log(`🔌 Cleaning up existing socket connection`);
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+
     const socket = io('http://localhost:3001', {
       auth: { token },
     });
@@ -97,13 +104,17 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
         
         console.log(`📝 Adding new message to chat:`, newMessage);
         
-        // Check if message already exists to prevent duplicates
+        // Enhanced duplicate prevention with message ID
         setMessages(prev => {
-          const messageExists = prev.some(msg => 
-            msg.content === newMessage.content && 
-            msg.sender === newMessage.sender &&
-            Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 5000 // Within 5 seconds
-          );
+          const messageId = `${newMessage.sender}_${newMessage.content}_${newMessage.timestamp}`;
+          const messageExists = prev.some(msg => {
+            const msgId = `${msg.sender}_${msg.content}_${msg.timestamp}`;
+            return msgId === messageId || (
+              msg.content === newMessage.content && 
+              msg.sender === newMessage.sender &&
+              Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 3000
+            );
+          });
           
           if (messageExists) {
             console.log(`⚠️ Message already exists, skipping duplicate`);
@@ -129,8 +140,10 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
 
     return () => {
       console.log(`🔌 Disconnecting from chat service`);
-      socket.disconnect();
-      socketRef.current = null;
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
   }, [conversationId, isInitialized]);
 

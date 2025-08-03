@@ -188,7 +188,7 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename,
           <span>Last updated {new Date(bot.last_updated).toLocaleDateString()}</span>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-4">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -214,7 +214,7 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onDelete, onDuplicate, onRename,
             </Tooltip>
           </TooltipProvider>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               size="sm"

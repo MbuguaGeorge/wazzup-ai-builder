@@ -21,6 +21,21 @@ interface SubscriptionPlan {
   trial_days: number;
   features: Record<string, any>;
   is_active: boolean;
+  // Credit-based system - only credits matter
+  credits_per_month: number;
+}
+
+interface CreditBalance {
+  credits_remaining: number;
+  credits_used_this_period: number;
+  credits_reset_date: string;
+  usage_by_model: Array<{
+    model__display_name: string;
+    model__provider: string;
+    total_credits: number;
+    total_cost: number;
+    request_count: number;
+  }>;
 }
 
 interface Subscription {
@@ -65,6 +80,7 @@ interface Invoice {
 const Billing = () => {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
   const [upgradingPlanId, setUpgradingPlanId] = useState<number | null>(null);
@@ -89,6 +105,21 @@ const Billing = () => {
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+    
+    // Refresh credit balance every 30 seconds to show real-time usage
+    const creditBalanceInterval = setInterval(async () => {
+      try {
+        const creditBalanceRes = await authFetch('http://localhost:8000/api/subscription/credits/balance/');
+        if (creditBalanceRes.ok) {
+          const creditBalanceData = await creditBalanceRes.json();
+          setCreditBalance(creditBalanceData);
+        }
+      } catch (error) {
+        console.error('Error refreshing credit balance:', error);
+      }
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(creditBalanceInterval);
   }, []);
 
   const fetchSubscriptionData = async () => {
@@ -107,10 +138,29 @@ const Billing = () => {
         setPlans(plansData);
       }
       
+      // Fetch credit balance
+      const creditBalanceRes = await authFetch('http://localhost:8000/api/subscription/credits/balance/');
+      if (creditBalanceRes.ok) {
+        const creditBalanceData = await creditBalanceRes.json();
+        setCreditBalance(creditBalanceData);
+      }
+      
     } catch (error) {
       console.error('Error fetching subscription data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshCreditBalance = async () => {
+    try {
+      const creditBalanceRes = await authFetch('http://localhost:8000/api/subscription/credits/balance/');
+      if (creditBalanceRes.ok) {
+        const creditBalanceData = await creditBalanceRes.json();
+        setCreditBalance(creditBalanceData);
+      }
+    } catch (error) {
+      console.error('Error refreshing credit balance:', error);
     }
   };
 
@@ -290,15 +340,14 @@ const Billing = () => {
     }).format(amount);
   };
 
-  const getTopFeatures = (features: Record<string, any>): string[] => {
+  const getTopFeatures = (plan: SubscriptionPlan): string[] => {
     const featureList = [];
-    if (features.bots_limit) featureList.push(`${features.bots_limit} bots`);
-    if (features.messages_per_month) featureList.push(`${features.messages_per_month.toLocaleString()} messages/month`);
-    if (features.ai_requests_per_month) featureList.push(`${features.ai_requests_per_month.toLocaleString()} AI requests/month`);
-    if (features.api_access) featureList.push('API access');
-    if (features.advanced_analytics) featureList.push('Advanced analytics');
-    if (features.custom_branding) featureList.push('Custom branding');
-    if (features.priority_support) featureList.push('Priority support');
+    
+    // Credit-based features
+    if (plan.credits_per_month) featureList.push(`${plan.credits_per_month.toLocaleString()} credits/month`);
+    featureList.push('Unlimited AI models');
+    featureList.push('Email support');
+    
     return featureList.slice(0, 3); // Show top 3 features
   };
 
@@ -429,23 +478,6 @@ const Billing = () => {
     return { action: "Switch", isUpgrade: false, isDowngrade: false };
   };
 
-  const getUsageData = () => {
-    if (!subscription || !subscription.plan) return { messages: 0, bots: 0, apiCalls: 0 };
-    
-    const features = subscription.plan.features || {};
-    const messagesLimit = features.messages_per_month || 1000;
-    const botsLimit = features.bots_limit || 1;
-    
-    return {
-      messages: Math.floor(messagesLimit * 0.78),
-      messagesLimit,
-      bots: Math.floor(botsLimit * 0.4),
-      botsLimit,
-      apiCalls: Math.floor((features.ai_requests_per_month || 1000) * 0.62),
-      apiCallsLimit: features.ai_requests_per_month || 1000
-    };
-  };
-
   if (loading) {
     return (
       <div className="space-y-8">
@@ -461,8 +493,6 @@ const Billing = () => {
       </div>
     );
   }
-
-  const usageData = getUsageData();
 
   return (
     <div className="space-y-8">
@@ -489,7 +519,7 @@ const Billing = () => {
               <p className="text-muted-foreground">
                 {subscription.is_trialing ? 
                   "Enjoy full access during your trial period" : 
-                  (subscription.plan?.features ? getTopFeatures(subscription.plan.features).join(', ') : 'No features')
+                  (subscription.plan?.features ? getTopFeatures(subscription.plan).join(', ') : 'No features')
                 }
               </p>
               <p className="text-sm text-muted-foreground mt-1">
@@ -597,58 +627,54 @@ const Billing = () => {
       )}
 
       {subscription && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Messages Used</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Credits Used</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{usageData.messages.toLocaleString()}</div>
-              <div className="w-full bg-muted rounded-full h-2 mt-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full" 
-                  style={{ width: `${Math.min((usageData.messages / usageData.messagesLimit) * 100, 100)}%` }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {Math.round((usageData.messages / usageData.messagesLimit) * 100)}% of {usageData.messagesLimit.toLocaleString()} limit
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Active Bots</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{usageData.bots}</div>
-              <div className="w-full bg-muted rounded-full h-2 mt-2">
-                <div 
-                  className="bg-green-600 h-2 rounded-full" 
-                  style={{ width: `${Math.min((usageData.bots / usageData.botsLimit) * 100, 100)}%` }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {usageData.bots} of {usageData.botsLimit} bots
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">API Calls</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{usageData.apiCalls.toLocaleString()}</div>
-              <div className="w-full bg-muted rounded-full h-2 mt-2">
-                <div 
-                  className="bg-purple-600 h-2 rounded-full" 
-                  style={{ width: `${Math.min((usageData.apiCalls / usageData.apiCallsLimit) * 100, 100)}%` }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {Math.round((usageData.apiCalls / usageData.apiCallsLimit) * 100)}% of {usageData.apiCallsLimit.toLocaleString()} limit
-              </p>
+              {loading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-24" />
+                  <Skeleton className="h-2 w-full" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {creditBalance ? 
+                      `${creditBalance.credits_used_this_period.toLocaleString()}` : 
+                      '0'
+                    }
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2 mt-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full" 
+                      style={{ 
+                        width: `${Math.min(
+                          creditBalance && subscription?.plan?.credits_per_month ? 
+                            (creditBalance.credits_used_this_period / subscription.plan.credits_per_month * 100) : 
+                            creditBalance ? 
+                              (creditBalance.credits_used_this_period / 500 * 100) : 0, // 500 is trial credit limit
+                          100
+                        )}%` 
+                      }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {creditBalance && subscription?.plan?.credits_per_month ? 
+                      Math.round(creditBalance.credits_used_this_period / subscription.plan.credits_per_month * 100) :
+                      creditBalance ? 
+                        Math.round(creditBalance.credits_used_this_period / 500 * 100) : 0
+                    }% of {subscription?.plan?.credits_per_month?.toLocaleString() || 500} credits used
+                  </p>
+                  {creditBalance && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {creditBalance.credits_remaining.toLocaleString()} credits remaining
+                    </p>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -678,24 +704,10 @@ const Billing = () => {
                     {formatCurrency(plan.price, plan.currency)}
                     <span className="text-sm font-normal text-muted-foreground">/{plan.interval}</span>
                   </p>
-                  {getPriceDifference(plan) && (
-                    <p className={cn(
-                      "text-sm mt-1",
-                      getPlanComparisonInfo(plan).isUpgrade ? "text-green-600" : 
-                      getPlanComparisonInfo(plan).isDowngrade ? "text-red-600" : "text-muted-foreground"
-                    )}>
-                      {getPriceDifference(plan)}
-                    </p>
-                  )}
-                  {plan.trial_days > 0 && (
-                    <p className="text-sm text-green-600 mt-1">
-                      {plan.trial_days}-day free trial
-                    </p>
-                  )}
                 </CardHeader>
                 <CardContent className="flex-1">
                   <ul className="space-y-2 mb-4">
-                    {getTopFeatures(plan.features).map((feature, i) => (
+                    {getTopFeatures(plan).map((feature, i) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-center">
                         <Check className="w-4 h-4 text-green-500 mr-2" />
                         {feature}

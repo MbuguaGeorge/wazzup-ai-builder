@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, ArrowRight } from 'lucide-react';
+import { Check, ArrowRight, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Pricing = () => {
@@ -11,49 +11,83 @@ const Pricing = () => {
       name: "Starter",
       price: "$29",
       period: "/month",
-      description: "Perfect for trying out the platform",
+      description: "Perfect for small businesses getting started",
+      credits: "2,500 credits",
       features: [
-        "Up to 100 messages/month",
-        "1 WhatsApp bot",
-        "Basic flow builder",
-        "Email support",
-        "Community access"
+        "Advanced AI integration",
+        "Unlimited bots",
+        "File & GSheet/Docs uploads",
+        "Real-time inbox",
+        "Handoff/takeover chat",
+        "Advanced analytics",
+        "Priority support",
+        "Custom branding",
+        "SSL security & 99.9% uptime"
       ],
-      cta: "Start 7-day trial",
+      cta: "Start 14-day trial",
       highlighted: false
     },
     {
-      name: "Professional",
+      name: "Growth",
       price: "$79",
       period: "/month",
-      description: "Ideal for small businesses and agencies",
+      description: "Ideal for growing businesses and agencies",
+      credits: "6,000 credits",
       features: [
-        "Up to 2,500 messages/month",
-        "5 WhatsApp bots",
         "Advanced AI integration",
-        "File & GSheet uploads",
+        "Unlimited bots",
+        "File & GSheet/Docs uploads",
         "Real-time inbox",
-        "Team collaboration (3 users)",
-        "Priority support"
+        "Handoff/takeover chat",
+        "Advanced analytics",
+        "Priority support",
+        "Custom branding",
       ],
-      cta: "Start 7-day trial",
+      cta: "Start 14-day trial",
       highlighted: true
     },
     {
-      name: "Enterprise",
-      price: "Custom",
-      description: "For large teams and high-volume needs",
+      name: "Pro",
+      price: "$149",
+      period: "/month",
+      description: "For high-volume businesses and enterprises",
+      credits: "8,500 credits",
       features: [
-        "Unlimited messages",
+        "Advanced AI integration",
         "Unlimited bots",
-        "White-label options",
+        "File & GSheet/Docs uploads",
+        "Real-time inbox",
+        "Handoff/takeover chat",
+        "Advanced analytics",
+        "Priority support",
+        "Custom branding",
+      ],
+      cta: "Start 14-day trial",
+      highlighted: false
+    },
+    {
+      name: "Custom",
+      price: "Custom",
+      period: "",
+      description: "For businesses requiring custom e-commerce integration",
+      credits: "Unlimited credits",
+      features: [
+        "Advanced AI integration",
+        "Unlimited bots",
+        "File & GSheet/Docs uploads",
+        "Real-time inbox",
+        "Handoff/takeover chat",
+        "Advanced analytics",
+        "Priority support",
+        "E-commerce website integration",
+        "Shopify/WooCommerce integration",
         "Custom integrations",
-        "Dedicated account manager",
-        "SLA guarantee",
-        "Advanced analytics"
+        "Dedicated development team",
+        "Custom feature development",
       ],
       cta: "Contact Sales",
-      highlighted: false
+      highlighted: false,
+      custom: true
     }
   ];
 
@@ -70,13 +104,15 @@ const Pricing = () => {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {plans.map((plan, index) => (
             <Card 
               key={index} 
               className={`relative ${
                 plan.highlighted 
                   ? 'border-primary shadow-lg scale-105 bg-background' 
+                  : plan.custom
+                  ? 'border-purple-500 shadow-lg bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20'
                   : 'bg-background/60 backdrop-blur-sm'
               }`}
             >
@@ -84,6 +120,15 @@ const Pricing = () => {
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <span className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium">
                     Most Popular
+                  </span>
+                </div>
+              )}
+              
+              {plan.custom && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-1">
+                    <Star className="w-3 h-3" />
+                    Custom
                   </span>
                 </div>
               )}
@@ -97,16 +142,19 @@ const Pricing = () => {
                   )}
                 </div>
                 <p className="text-muted-foreground mt-2">{plan.description}</p>
+                <div className="mt-3 p-2 bg-primary/10 rounded-lg">
+                  <span className="text-sm font-medium text-primary">{plan.credits}</span>
+                </div>
               </CardHeader>
               
               <CardContent className="pt-4">
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center gap-3">
-                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <li key={featureIndex} className="flex items-start gap-3">
+                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Check className="w-3 h-3 text-green-600" />
                       </div>
-                      <span className="text-sm">{feature}</span>
+                      <span className="text-sm leading-relaxed">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -115,10 +163,12 @@ const Pricing = () => {
                   className={`w-full ${
                     plan.highlighted 
                       ? 'bg-primary text-primary-foreground' 
+                      : plan.custom
+                      ? 'bg-purple-500 hover:bg-purple-600 text-white'
                       : 'variant-outline'
                   }`}
-                  variant={plan.highlighted ? 'default' : 'outline'}
-                  onClick={() => navigate('/signup')}
+                  variant={plan.highlighted ? 'default' : plan.custom ? 'default' : 'outline'}
+                  onClick={() => plan.custom ? window.open('mailto:sales@wozza.io?subject=Custom Plan Inquiry', '_blank') : navigate('/signup')}
                 >
                   {plan.cta}
                   <ArrowRight className="ml-2 w-4 h-4" />
@@ -132,7 +182,7 @@ const Pricing = () => {
           <p className="text-muted-foreground">
             All plans include SSL security, 99.9% uptime, and regular feature updates. 
             <br />
-            Need something custom? <span className="text-primary cursor-pointer hover:underline">Contact our sales team</span>.
+            Need something custom? <span className="text-primary cursor-pointer hover:underline" onClick={() => window.open('mailto:sales@wozza.io?subject=Custom Plan Inquiry', '_blank')}>Contact our sales team</span>.
           </p>
         </div>
       </div>

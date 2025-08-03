@@ -30,11 +30,11 @@ const DashboardSidebar = () => {
       icon: MessageCircle,
       href: '/dashboard/chat-management',
     },
-    {
-      title: 'Flow Templates',
-      icon: FileCode,
-      href: '/dashboard/templates',
-    },
+    // {
+    //   title: 'Flow Templates',
+    //   icon: FileCode,
+    //   href: '/dashboard/templates',
+    // },
     {
       title: 'Notifications',
       icon: Bell,
@@ -45,11 +45,11 @@ const DashboardSidebar = () => {
       icon: CreditCard,
       href: '/dashboard/billing',
     },
-    {
-      title: 'Usage',
-      icon: BarChart,
-      href: '/dashboard/usage',
-    },
+    // {
+    //   title: 'Usage',
+    //   icon: BarChart,
+    //   href: '/dashboard/usage',
+    // },
     {
       title: 'Settings',
       icon: Settings,

@@ -1,12 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, CheckCircle, FileText, HelpCircle, Book, MessageSquare } from "lucide-react";
+import { Upload, CheckCircle, FileText, HelpCircle, Book, MessageSquare, Clock, AlertCircle, CheckCircle2, XCircle, MessageSquare as MessageIcon } from "lucide-react";
+import { authFetch } from "@/lib/authFetch";
+import { API_BASE_URL } from "@/lib/config";
+import SupportTicketDetail from "@/components/support/SupportTicketDetail";
+
+interface SupportTicket {
+  id: number;
+  subject: string;
+  description: string;
+  category: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at?: string;
+  user_full_name: string;
+  user_email: string;
+}
 
 const Support = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +35,44 @@ const Support = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
+  const [showTicketDetail, setShowTicketDetail] = useState(false);
   const { toast } = useToast();
+
+  // Fetch tickets on component mount
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  const fetchTickets = async () => {
+    try {
+      const response = await authFetch(`${API_BASE_URL}api/support/tickets/`);
+      if (response.ok) {
+        const data = await response.json();
+        setTickets(data);
+      } else {
+        console.error('Error response:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        toast({
+          title: "Error fetching tickets",
+          description: `Status: ${response.status} - ${response.statusText}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
+      toast({
+        title: "Error fetching tickets",
+        description: "Please check if the server is running and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -49,19 +104,97 @@ const Support = () => {
       return;
     }
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    toast({
-      title: "Support request submitted",
-      description: "We'll get back to you within 24 hours.",
-    });
+    
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('subject', formData.subject);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('description', formData.description);
+      
+      if (selectedFile) {
+        formDataToSend.append('attachments', selectedFile);
+      }
+
+      const response = await authFetch(`${API_BASE_URL}api/support/tickets/`, {
+        method: 'POST',
+        body: formDataToSend,
+      });
+
+      if (response.ok) {
+        setIsSubmitted(true);
+        toast({
+          title: "Support request submitted",
+          description: "We'll get back to you within 24 hours.",
+        });
+        // Refresh tickets list
+        fetchTickets();
+      } else {
+        console.error('Error response:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        
+        let errorMessage = "Please try again.";
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.detail || errorMessage;
+        } catch (e) {
+          errorMessage = `Status: ${response.status} - ${response.statusText}`;
+        }
+        
+        toast({
+          title: "Error submitting request",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error submitting request",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
     setFormData({ subject: "", category: "", description: "" });
     setSelectedFile(null);
     setIsSubmitted(false);
+  };
+
+  const handleViewTicket = (ticketId: number) => {
+    setSelectedTicketId(ticketId);
+    setShowTicketDetail(true);
+  };
+
+  const handleCloseTicketDetail = () => {
+    setShowTicketDetail(false);
+    setSelectedTicketId(null);
+    // Refresh tickets to get updated status
+    fetchTickets();
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'open':
+        return <AlertCircle className="w-4 h-4 text-orange-500" />;
+      case 'resolved':
+        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+      default:
+        return <AlertCircle className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   const helpfulLinks = [
@@ -86,12 +219,12 @@ const Support = () => {
   ];
 
   const categories = [
-    "Billing",
-    "Technical Issue",
-    "General Question",
-    "Feedback",
-    "Feature Request",
-    "Account Management",
+    "billing",
+    "technical_issue",
+    "general_question",
+    "feedback",
+    "feature_request",
+    "account_management",
   ];
 
   if (isSubmitted) {
@@ -130,6 +263,62 @@ const Support = () => {
         <h1 className="text-2xl font-bold">Support</h1>
         <p className="text-muted-foreground">Need help? We're here to assist you. Submit a support request and our team will get back to you as soon as possible.</p>
       </div>
+
+      {/* Tickets Section */}
+      <div className="space-y-4">
+        <Card>
+          <CardContent>
+            {loadingTickets ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : tickets.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <img alt="Empty state" src="https://frontends.mailjet.com/assets/mg_tickets.png" className="w-[15%] mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-bold">No Tickets Found</p>
+                <p className="text-sm w-[15%] font-light mx-auto">Having trouble? Find answers to our most common questions below or submit a ticket for additional help.</p>
+              </div>
+            ) : (
+              <div className="space-y-4 p-4">
+                {tickets.map((ticket) => (
+                  <div 
+                    key={ticket.id} 
+                    className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                    // Temporarily disabled: onClick={() => handleViewTicket(ticket.id)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          {getStatusIcon(ticket.status)}
+                          <h3 className="font-medium">{ticket.subject}</h3>
+                          <Badge variant="outline" className="text-xs">
+                            {ticket.id}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                          {ticket.description}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>Category: {ticket.category.replace('_', ' ')}</span>
+                          <span>Created: {formatDate(ticket.created_at)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          className={`ml-2 ${ticket.status === 'resolved' ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`} 
+                        >
+                          {ticket.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Form */}
         <div className="lg:col-span-2">
@@ -162,7 +351,7 @@ const Support = () => {
                     <SelectContent>
                       {categories.map((category) => (
                         <SelectItem key={category} value={category}>
-                          {category}
+                          {category.replace('_', ' ')}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -274,6 +463,26 @@ const Support = () => {
           </Card>
         </div>
       </div>
+
+      {/* Ticket Detail Dialog */}
+      <Dialog open={showTicketDetail} onOpenChange={setShowTicketDetail}>
+        <DialogContent className="max-w-4xl h-auto max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-4">
+            <DialogTitle>Support Ticket Details</DialogTitle>
+            <DialogDescription>
+              View and respond to your support ticket in real-time.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 px-6">
+            {selectedTicketId && (
+              <SupportTicketDetail
+                ticketId={selectedTicketId}
+                onClose={handleCloseTicketDetail}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

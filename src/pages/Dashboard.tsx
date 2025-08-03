@@ -18,6 +18,7 @@ import { authFetch } from '@/lib/authFetch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import BotSettingsPage from '@/pages/BotSettingsPage';
+import { toast } from '@/components/ui/sonner';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -139,8 +140,16 @@ const Dashboard = () => {
         setNewBotName('');
         setIsCreateDialogOpen(false);
         navigate(`/flow-builder/${newBot.id}`);
+      } else {
+        // Handle specific error responses
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to create bot. Please try again.';
+        toast.error(errorMessage);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error('Error creating bot:', err);
+      toast.error('Failed to create bot. Please try again.');
+    }
   };
 
   const handleDeleteBot = async (id: string) => {
@@ -150,8 +159,16 @@ const Dashboard = () => {
       });
       if (response.ok) {
         setBots(bots.filter(bot => bot.id !== id));
+        toast.success('Bot deleted successfully');
+      } else {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to delete bot. Please try again.';
+        toast.error(errorMessage);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error('Error deleting bot:', err);
+      toast.error('Failed to delete bot. Please try again.');
+    }
   };
 
   const handleDuplicateBot = async (id: string) => {
@@ -162,8 +179,16 @@ const Dashboard = () => {
       if (response.ok) {
         const newBot = await response.json();
         setBots([...bots, newBot]);
+        toast.success('Bot duplicated successfully');
+      } else {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to duplicate bot. Please try again.';
+        toast.error(errorMessage);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error('Error duplicating bot:', err);
+      toast.error('Failed to duplicate bot. Please try again.');
+    }
   };
 
   const handleRenameBot = (id: string, currentName: string) => {
@@ -188,8 +213,16 @@ const Dashboard = () => {
         setNewBotName('');
         setSelectedBotId(null);
         setBotNameError('');
+        toast.success('Bot renamed successfully');
+      } else {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to rename bot. Please try again.';
+        toast.error(errorMessage);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error('Error renaming bot:', err);
+      toast.error('Failed to rename bot. Please try again.');
+    }
   };
 
   const handleManageFlows = (botId: string) => {
@@ -321,7 +354,7 @@ const Dashboard = () => {
       </div>
 
       {/* Bots Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
         <CreateBotCard onClick={() => setIsCreateDialogOpen(true)} />
         {filteredBots.map((bot) => (
           <BotCard

@@ -521,8 +521,16 @@ const FlowBuilder = () => {
         setSelectedFlow(newFlow);
         setNewFlowName('');
         setIsCreateFlowDialogOpen(false);
+        toast.success('Flow created successfully');
+      } else {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to create flow. Please try again.';
+        toast.error(errorMessage);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error('Error creating flow:', err);
+      toast.error('Failed to create flow. Please try again.');
+    }
   };
 
   const handleUpdateFlow = async (flowId: string, data: any) => {
@@ -543,8 +551,15 @@ const FlowBuilder = () => {
         const updatedFlow = await response.json();
         setFlows(flows.map((flow: any) => flow.id === flowId ? updatedFlow : flow));
         setSelectedFlow(updatedFlow);
+      } else {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to update flow. Please try again.';
+        toast.error(errorMessage);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error('Error updating flow:', err);
+      toast.error('Failed to update flow. Please try again.');
+    }
   };
 
   const handleDeleteFlow = async (flowId: string) => {
@@ -555,8 +570,16 @@ const FlowBuilder = () => {
       if (response.ok) {
         setFlows(flows.filter((flow: any) => flow.id !== flowId));
         setSelectedFlow(flows.length > 1 ? flows[0] : null);
+        toast.success('Flow deleted successfully');
+      } else {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to delete flow. Please try again.';
+        toast.error(errorMessage);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error('Error deleting flow:', err);
+      toast.error('Failed to delete flow. Please try again.');
+    }
   };
 
   const handleSetActive = async (flowId: string) => {
@@ -571,8 +594,16 @@ const FlowBuilder = () => {
         const updatedFlow = await response.json();
         setFlows(flows.map((flow: any) => ({ ...flow, is_active: flow.id === flowId })));
         setSelectedFlow(updatedFlow);
+        toast.success('Flow activated successfully');
+      } else {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to activate flow. Please try again.';
+        toast.error(errorMessage);
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error('Error activating flow:', err);
+      toast.error('Failed to activate flow. Please try again.');
+    }
   };
 
   useEffect(() => {
