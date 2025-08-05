@@ -110,10 +110,10 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
           const messageExists = prev.some(msg => {
             const msgId = `${msg.sender}_${msg.content}_${msg.timestamp}`;
             return msgId === messageId || (
-              msg.content === newMessage.content && 
-              msg.sender === newMessage.sender &&
+            msg.content === newMessage.content && 
+            msg.sender === newMessage.sender &&
               Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 3000
-            );
+          );
           });
           
           if (messageExists) {
@@ -142,7 +142,7 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
       console.log(`🔌 Disconnecting from chat service`);
       if (socketRef.current) {
         socketRef.current.disconnect();
-        socketRef.current = null;
+      socketRef.current = null;
       }
     };
   }, [conversationId, isInitialized]);

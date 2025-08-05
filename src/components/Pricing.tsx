@@ -1,8 +1,14 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, ArrowRight, Star } from 'lucide-react';
+import { Check, ArrowRight, Star, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const Pricing = () => {
   const navigate = useNavigate();
@@ -178,12 +184,131 @@ const Pricing = () => {
           ))}
         </div>
         
-        <div className="text-center mt-12">
-          <p className="text-muted-foreground">
-            All plans include SSL security, 99.9% uptime, and regular feature updates. 
-            <br />
-            Need something custom? <span className="text-primary cursor-pointer hover:underline" onClick={() => window.open('mailto:sales@wozza.io?subject=Custom Plan Inquiry', '_blank')}>Contact our sales team</span>.
-          </p>
+        {/* Meta Charges Section */}
+        <div className="mt-16 max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <h3 className="text-2xl font-bold">WhatsApp Business API Charges</h3>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-5 h-5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Meta charges are separate from your Wozza subscription and are billed directly by Meta based on your WhatsApp usage.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <p className="text-muted-foreground">
+              Additional charges from Meta for WhatsApp Business API usage
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="bg-background/60 backdrop-blur-sm">
+              <CardHeader className="text-center pb-4">
+                <CardTitle className="text-lg font-semibold">Conversation Charges</CardTitle>
+                <div className="mt-2">
+                  <span className="text-2xl font-bold">$0.0050</span>
+                  <span className="text-muted-foreground text-sm"> per conversation</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  First 1,000 conversations per month are free
+                </p>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>24-hour conversation window</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>Includes all message types</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>Billed by Meta directly</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-background/60 backdrop-blur-sm">
+              <CardHeader className="text-center pb-4">
+                <CardTitle className="text-lg font-semibold">Media Messages</CardTitle>
+                <div className="mt-2">
+                  <span className="text-2xl font-bold">$0.0050</span>
+                  <span className="text-muted-foreground text-sm"> per message</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Images, videos, documents, audio
+                </p>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>Images & videos</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>Documents & PDFs</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>Audio messages</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-background/60 backdrop-blur-sm">
+              <CardHeader className="text-center pb-4">
+                <CardTitle className="text-lg font-semibold">Template Messages</CardTitle>
+                <div className="mt-2">
+                  <span className="text-2xl font-bold">$0.0320</span>
+                  <span className="text-muted-foreground text-sm"> per message</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  For initiating conversations
+                </p>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>Marketing messages</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>Appointment reminders</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>Order updates</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="text-center mt-8">
+            <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+              <strong>Note:</strong> Meta charges are billed separately from your Wozza subscription. 
+              These rates are set by Meta and may change. You'll be charged based on your actual WhatsApp usage.
+              <br />
+              <a 
+                href="https://developers.facebook.com/docs/whatsapp/pricing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                View Meta's official pricing →
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </section>

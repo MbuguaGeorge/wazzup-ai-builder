@@ -87,6 +87,7 @@ const Billing = () => {
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
   const [pendingDowngradePlan, setPendingDowngradePlan] = useState<SubscriptionPlan | null>(null);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   useEffect(() => {
     fetchSubscriptionData();
@@ -165,6 +166,10 @@ const Billing = () => {
   };
 
   const handleCancelSubscription = async () => {
+    setCancelConfirmOpen(true);
+  };
+
+  const handleCancelConfirm = async () => {
     if (!subscription) return;
     
     setCanceling(true);
@@ -185,6 +190,7 @@ const Billing = () => {
       toast.error('An error occurred while canceling subscription.');
     } finally {
       setCanceling(false);
+      setCancelConfirmOpen(false);
     }
   };
 
@@ -206,14 +212,14 @@ const Billing = () => {
     }
   };
 
-  const handleUpgrade = async (planId: number) => {
+  const handleUpgrade = async (planId: number, paymentMethodId?: string) => {
     setUpgradingPlanId(planId);
     setUpgradeLoading(true);
     try {
       const response = await authFetch('http://localhost:8000/api/subscription/upgrade/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan_id: planId }),
+        body: JSON.stringify({ plan_id: planId, payment_method_id: paymentMethodId }),
       });
       
       if (response.ok) {
@@ -232,12 +238,22 @@ const Billing = () => {
         await fetchSubscriptionData();
       } else {
         let errorMessage = 'Failed to update subscription.';
+        let errorData;
         try {
-          const errorData = await response.json();
+          errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch (parseError) {
           console.error('Error parsing response:', parseError);
         }
+        
+        // Check if this is a redirect for trial users
+        if (errorData && errorData.redirect_to_create) {
+          console.log('Redirecting trial user to create subscription flow');
+          // Automatically call the create subscription flow
+          await handleSubscribe(planId);
+          return;
+        }
+        
         toast.error(errorMessage);
       }
     } catch (error) {
@@ -270,9 +286,9 @@ const Billing = () => {
           return;
         }
         
-        if (data && data.url) {
+        if (data && data.checkout_url) {
           // Redirect to Stripe checkout
-          window.location.href = data.url;
+          window.location.href = data.checkout_url;
         } else {
           toast.success('Subscription created successfully.');
           await fetchSubscriptionData();
@@ -296,7 +312,7 @@ const Billing = () => {
     }
   };
 
-  const handlePlanAction = async (planId: number) => {
+  const handlePlanAction = async (planId: number, paymentMethodId: string | null) => {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
     
@@ -310,8 +326,11 @@ const Billing = () => {
     }
     
     // Handle the action
-    if (subscription) {
-      await handleUpgrade(planId);
+    // For trial users, always use create subscription flow
+    if (subscription && subscription.is_trialing) {
+      await handleSubscribe(planId);
+    } else if (subscription) {
+      await handleUpgrade(planId, paymentMethodId);
     } else {
       await handleSubscribe(planId);
     }
@@ -476,6 +495,27 @@ const Billing = () => {
       return { action: "Downgrade", isUpgrade: false, isDowngrade: true };
     }
     return { action: "Switch", isUpgrade: false, isDowngrade: false };
+  };
+
+  const getEffectiveCreditLimit = (): number => {
+    if (!subscription || !creditBalance) return 500; // Default trial limit
+    
+    // If user is on trial, use trial limit
+    if (subscription.is_trialing) return 500;
+    
+    // For paid subscriptions, use the plan's credit limit
+    return subscription.plan?.credits_per_month || 500;
+  };
+
+  const getEffectiveCreditUsage = (): number => {
+    if (!creditBalance) return 0;
+    return creditBalance.credits_used_this_period;
+  };
+
+  const getEffectiveCreditPercentage = (): number => {
+    const limit = getEffectiveCreditLimit();
+    const used = getEffectiveCreditUsage();
+    return Math.min((used / limit) * 100, 100);
   };
 
   if (loading) {
@@ -643,35 +683,25 @@ const Billing = () => {
                 <>
                   <div className="text-2xl font-bold text-gray-900">
                     {creditBalance ? 
-                      `${creditBalance.credits_used_this_period.toLocaleString()}` : 
+                      `${getEffectiveCreditUsage().toLocaleString()}` : 
                       '0'
                     }
                   </div>
-                  <div className="w-full bg-muted rounded-full h-2 mt-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full" 
+              <div className="w-full bg-muted rounded-full h-2 mt-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full" 
                       style={{ 
-                        width: `${Math.min(
-                          creditBalance && subscription?.plan?.credits_per_month ? 
-                            (creditBalance.credits_used_this_period / subscription.plan.credits_per_month * 100) : 
-                            creditBalance ? 
-                              (creditBalance.credits_used_this_period / 500 * 100) : 0, // 500 is trial credit limit
-                          100
-                        )}%` 
+                        width: `${getEffectiveCreditPercentage()}%` 
                       }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {creditBalance && subscription?.plan?.credits_per_month ? 
-                      Math.round(creditBalance.credits_used_this_period / subscription.plan.credits_per_month * 100) :
-                      creditBalance ? 
-                        Math.round(creditBalance.credits_used_this_period / 500 * 100) : 0
-                    }% of {subscription?.plan?.credits_per_month?.toLocaleString() || 500} credits used
+                ></div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                    {Math.round(getEffectiveCreditPercentage())}% of {getEffectiveCreditLimit().toLocaleString()} credits used
                   </p>
                   {creditBalance && (
                     <p className="text-xs text-gray-400 mt-1">
                       {creditBalance.credits_remaining.toLocaleString()} credits remaining
-                    </p>
+              </p>
                   )}
                 </>
               )}
@@ -720,7 +750,7 @@ const Billing = () => {
                     variant={getPlanActionVariant(plan)}
                     className="w-full"
                     disabled={subscription?.plan?.id === plan.id || upgradeLoading}
-                    onClick={() => handlePlanAction(plan.id)}
+                    onClick={() => handlePlanAction(plan.id, null)}
                   >
                     {upgradingPlanId === plan.id && upgradeLoading ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -775,6 +805,44 @@ const Billing = () => {
               className="bg-orange-500 hover:bg-orange-600"
             >
               Yes, Downgrade
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirm Subscription Cancellation
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogDescription className="sr-only">
+            Confirmation dialog for canceling subscription
+          </AlertDialogDescription>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <div>
+              Are you sure you want to cancel your subscription? This action cannot be undone.
+            </div>
+            <div className="bg-muted p-3 rounded-lg">
+              <div className="text-sm font-medium mb-2">What this means:</div>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li>• You will lose access to all premium features.</li>
+                <li>• You won't receive any messages from your bots.</li>
+                <li>• Your credits will be reset at the end of your current billing period.</li>
+              </ul>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCancelConfirmOpen(false)}>
+              Keep Subscription
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCancelConfirm}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Yes, Cancel
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

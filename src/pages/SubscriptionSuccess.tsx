@@ -13,9 +13,11 @@ interface SubscriptionData {
     currency: string;
     interval: string;
     features: Record<string, any>;
+    credits_per_month: number;
   };
   status: string;
   current_period_end: string;
+  is_trialing: boolean;
 }
 
 const SubscriptionSuccess = () => {
@@ -25,6 +27,13 @@ const SubscriptionSuccess = () => {
 
   useEffect(() => {
     fetchSubscriptionData();
+    
+    // Refresh subscription data after a short delay to ensure webhook processing is complete
+    const refreshTimer = setTimeout(() => {
+      fetchSubscriptionData();
+    }, 2000);
+    
+    return () => clearTimeout(refreshTimer);
   }, []);
 
   const fetchSubscriptionData = async () => {
@@ -56,35 +65,13 @@ const SubscriptionSuccess = () => {
     }).format(amount);
   };
 
-  const getTopFeatures = (features: Record<string, any>): string[] => {
+  const getTopFeatures = (plan: any): string[] => {
     const featureList: string[] = [];
     
-    const priorityKeys = ['bots_limit', 'messages_per_month', 'support'];
-    
-    for (const key of priorityKeys) {
-      if (features[key] !== undefined) {
-        const value = features[key];
-        if (typeof value === 'number') {
-          if (value === -1) {
-            featureList.push('Unlimited bots');
-          } else if (key === 'bots_limit') {
-            featureList.push(`${value} bot${value !== 1 ? 's' : ''}`);
-          } else if (key === 'messages_per_month') {
-            featureList.push(`${value.toLocaleString()} messages/month`);
-          }
-        } else if (typeof value === 'object' && value !== null) {
-          if (key === 'support') {
-            const supportFeatures = [];
-            if (value.email) supportFeatures.push('Email');
-            if (value.chat) supportFeatures.push('Live Chat');
-            if (value.phone) supportFeatures.push('Phone');
-            if (supportFeatures.length > 0) {
-              featureList.push(supportFeatures.join(', ') + ' support');
-            }
-          }
-        }
-      }
-    }
+    // Credit-based features
+    if (plan.credits_per_month) featureList.push(`${plan.credits_per_month.toLocaleString()} credits/month`);
+    featureList.push('Unlimited AI models');
+    featureList.push('Email support');
     
     return featureList.slice(0, 3);
   };
@@ -108,9 +95,14 @@ const SubscriptionSuccess = () => {
           <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Welcome to {subscription?.plan.name}!</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            {subscription?.is_trialing ? 'Welcome to Your Trial!' : `Welcome to ${subscription?.plan.name}!`}
+          </h1>
           <p className="text-lg text-muted-foreground">
-            Your subscription has been activated successfully. You're all set to start building amazing chatbots!
+            {subscription?.is_trialing 
+              ? "Your trial has been activated successfully. Start exploring our platform!"
+              : "Your subscription has been activated successfully. You're all set to start building amazing chatbots!"
+            }
           </p>
         </div>
 
@@ -119,7 +111,7 @@ const SubscriptionSuccess = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-yellow-500" />
-              Your Subscription Details
+              Your {subscription?.is_trialing ? 'Trial' : 'Subscription'} Details
             </CardTitle>
             <CardDescription>
               Here's what you now have access to
@@ -128,20 +120,25 @@ const SubscriptionSuccess = () => {
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-lg">{subscription?.plan.name}</h3>
+                <h3 className="font-semibold text-lg">
+                  {subscription?.is_trialing ? 'Trial Period' : subscription?.plan.name}
+                </h3>
                 <p className="text-muted-foreground">
-                  {formatCurrency(subscription?.plan.price || 0, subscription?.plan.currency || 'usd')}/{subscription?.plan.interval}
+                  {subscription?.is_trialing 
+                    ? 'Free Trial'
+                    : `${formatCurrency(subscription?.plan.price || 0, subscription?.plan.currency || 'usd')}/${subscription?.plan.interval}`
+                  }
                 </p>
               </div>
               <Badge variant="secondary" className="bg-green-100 text-green-700">
-                Active
+                {subscription?.is_trialing ? 'Trial' : 'Active'}
               </Badge>
             </div>
 
             <div className="border-t pt-4">
               <h4 className="font-medium mb-3">What's included:</h4>
               <div className="space-y-2">
-                {subscription?.plan.features && getTopFeatures(subscription.plan.features).map((feature, index) => (
+                {subscription?.plan && getTopFeatures(subscription.plan).map((feature, index) => (
                   <div key={index} className="flex items-center gap-2 text-sm">
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>{feature}</span>
@@ -152,7 +149,9 @@ const SubscriptionSuccess = () => {
 
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-sm text-muted-foreground">
-                <strong>Next billing date:</strong> {subscription ? formatDate(subscription.current_period_end) : 'N/A'}
+                <strong>
+                  {subscription?.is_trialing ? 'Trial ends:' : 'Next billing date:'}
+                </strong> {subscription ? formatDate(subscription.current_period_end) : 'N/A'}
               </p>
             </div>
           </CardContent>
