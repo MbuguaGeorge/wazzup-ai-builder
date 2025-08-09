@@ -40,14 +40,14 @@ export const NotificationSettings = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-  const NOTIF_SETTINGS_ENDPOINT = API_URL + '/api/notification-settings/';
+  const API_URL = process.env.API_BASE_URL;
+  const DJANGO_API_URL = process.env.DJANGO_API_URL;
 
   // Fetch settings from backend on mount
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const res = await authFetch(NOTIF_SETTINGS_ENDPOINT);
+        const res = await authFetch(`${DJANGO_API_URL}/api/notification-settings/`);
         const text = await res.text();
         // If response is HTML, user is probably not authenticated
         if (text.trim().startsWith('<')) {
@@ -81,7 +81,7 @@ export const NotificationSettings = () => {
     const prev = settings[setting];
     setSettings((s) => ({ ...s, [setting]: value }));
     try {
-      const res = await authFetch(NOTIF_SETTINGS_ENDPOINT, {
+      const res = await authFetch(`${DJANGO_API_URL}/api/notification-settings/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [backendField]: value }),

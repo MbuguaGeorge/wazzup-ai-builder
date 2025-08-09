@@ -35,12 +35,15 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
     avatarUrl: AVATAR_OPTIONS[0],
   });
 
+  const API_BASE_URL = process.env.API_BASE_URL;
+  const DJANGO_API_URL = process.env.DJANGO_API_URL;
+
   const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await authFetch('http://localhost:8000/api/me/');
+        const res = await authFetch(`${DJANGO_API_URL}/api/me/`);
         if (res.ok) {
           const userData = await res.json();
           setUser({

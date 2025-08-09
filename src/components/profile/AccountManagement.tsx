@@ -26,6 +26,9 @@ export const AccountManagement = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { toast } = useToast();
 
+  const API_BASE_URL = process.env.API_BASE_URL;
+  const DJANGO_API_URL = process.env.DJANGO_API_URL;
+
   const handleExportData = async () => {
     setIsExporting(true);
     // Simulate export process
@@ -52,7 +55,7 @@ export const AccountManagement = () => {
     setIsDeleting(true);
     try {
       console.log('Attempting to delete account...');
-      const response = await authFetch('http://localhost:8000/api/delete-account/', {
+      const response = await authFetch(`${DJANGO_API_URL}/api/delete-account/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

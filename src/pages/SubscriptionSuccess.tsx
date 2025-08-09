@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, ArrowRight, Zap, Users, MessageSquare } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '@/lib/config';
 
 interface SubscriptionData {
   plan: {
@@ -38,7 +39,7 @@ const SubscriptionSuccess = () => {
 
   const fetchSubscriptionData = async () => {
     try {
-      const response = await authFetch('http://localhost:8000/api/subscription/current/');
+      const response = await authFetch(`${API_BASE_URL}/api/subscription/current/`);
       if (response.ok) {
         const data = await response.json();
         setSubscription(data);

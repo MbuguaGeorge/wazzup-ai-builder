@@ -7,6 +7,7 @@ import { ConversationSidebar} from '@/components/chat/ConversationSidebar';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { MessageCircle, Bot, Search } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
+import { API_BASE_URL } from '@/lib/config';
 
 const ChatDashboard = () => {
   const [selectedBot, setSelectedBot] = useState('');
@@ -20,7 +21,7 @@ const ChatDashboard = () => {
 
   useEffect(() => {
     setLoading(true);
-    authFetch('http://localhost:8000/api/bots/')
+    authFetch(`${API_BASE_URL}/api/bots/`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();

@@ -42,11 +42,14 @@ export const AccountInformation = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  const API_BASE_URL = process.env.API_BASE_URL;
+  const DJANGO_API_URL = process.env.DJANGO_API_URL;
+
   // Load user data on mount
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const response = await authFetch('http://localhost:8000/api/me/');
+        const response = await authFetch(`${DJANGO_API_URL}/api/me/`);
         if (response.ok) {
           const userData = await response.json();
           setFormData({
@@ -78,7 +81,7 @@ export const AccountInformation = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const response = await authFetch('http://localhost:8000/api/me/', {
+      const response = await authFetch(`${DJANGO_API_URL}/api/me/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -139,7 +142,7 @@ export const AccountInformation = () => {
 
     setLoading(true);
     try {
-      const response = await authFetch('http://localhost:8000/api/change-password/', {
+      const response = await authFetch(`${DJANGO_API_URL}/api/change-password/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

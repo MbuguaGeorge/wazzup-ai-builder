@@ -11,7 +11,8 @@ import DeleteButton from './DeleteButton';
 import { useEffect } from 'react';
 import { authFetch } from '@/lib/authFetch';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.API_BASE_URL;
+const DJANGO_API_URL = process.env.DJANGO_API_URL;
 
 const AINode = ({ data, isConnectable, id }: NodeProps) => {
   const [newLink, setNewLink] = useState('');
@@ -35,7 +36,7 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
   useEffect(() => {
     async function fetchTrialStatus() {
       try {
-        const response = await authFetch(`${API_BASE}/api/subscription/credits/balance/`);
+        const response = await authFetch(`${DJANGO_API_URL}/api/subscription/credits/balance/`);
         if (response.ok) {
           const data = await response.json();
           setTrialStatus({
@@ -78,7 +79,7 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
   useEffect(() => {
     async function checkGoogleStatus() {
       try {
-        const res = await authFetch(`${API_BASE}/api/google-oauth/status/`);
+        const res = await authFetch(`${DJANGO_API_URL}/api/google-oauth/status/`);
         const result = await res.json();
         setGoogleAuth(!!result.authorized);
       } catch (e) {
@@ -94,7 +95,7 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
     setAuthChecking(true);
     setAuthError(null);
     try {
-      const res = await authFetch(`${API_BASE}/api/google-oauth/url/`);
+      const res = await authFetch(`${DJANGO_API_URL}/api/google-oauth/url/`);
       const data = await res.json();
       if (!data.url) throw new Error('No OAuth URL returned');
       const width = 500, height = 600;
@@ -119,7 +120,7 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
       onUpdate({ gdrive_links: updatedLinks });
       setNewLink('');
 
-      await authFetch(`${API_BASE}/api/upsert-gdrive-link/`, {
+      await authFetch(`${DJANGO_API_URL}/api/upsert-gdrive-link/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ link: newLink, flow_id: data.flow_id }),
