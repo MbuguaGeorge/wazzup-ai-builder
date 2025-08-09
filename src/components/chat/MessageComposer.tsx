@@ -21,10 +21,13 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ conversationId
   const [isSending, setIsSending] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
+  const API_BASE_URL = process.env.API_BASE_URL;
+  const DJANGO_API_URL = process.env.DJANGO_API_URL;
+
   useEffect(() => {
     const token = getAccessToken();
     if (!token) return;
-    const socket = io('http://localhost:3001', {
+    const socket = io(`${API_BASE_URL}`, {
       auth: { token },
     });
     socketRef.current = socket;
@@ -61,7 +64,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ conversationId
           const parts = conversationId.split('_');
           if (parts.length >= 3) phone = parts.slice(2).join('_');
         }
-        const response = await authFetch(`http://localhost:8000/api/flows/send_whatsapp_message/`, {
+        const response = await authFetch(`${DJANGO_API_URL}/api/flows/send_whatsapp_message/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

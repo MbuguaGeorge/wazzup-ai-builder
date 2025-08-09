@@ -233,7 +233,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      const socket: Socket = io('http://localhost:3001', {
+      const socket: Socket = io(`${API_BASE_URL}`, {
         auth: { token },
         transports: ['websocket', 'polling'],
         timeout: 20000,

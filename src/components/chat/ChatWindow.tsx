@@ -29,6 +29,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   const [notesLoading, setNotesLoading] = useState(false);
   const MAX_WORDS = 30;
 
+  const API_BASE_URL = process.env.API_BASE_URL;
+  const DJANGO_API_URL = process.env.DJANGO_API_URL;
+
   // Scroll to bottom when chat is opened or message is sent
   const scrollToBottom = () => {
     if (messageListRef.current && typeof messageListRef.current.scrollToBottom === 'function') {
@@ -42,7 +45,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
 
   useEffect(() => {
     if (!conversationId) return;
-    authFetch(`http://localhost:3001/api/chat/conversations/${botId}`)
+    authFetch(`${API_BASE_URL}/api/chat/conversations/${botId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -52,7 +55,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
       });
     // Always fetch handoff status from backend for persistence
     const fetchHandoff = () => {
-      authFetch(`http://localhost:8000/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
+      authFetch(`${DJANGO_API_URL}/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
         .then(async (res) => {
           if (res.ok) {
             const data = await res.json();
@@ -67,7 +70,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token || !conversationId) return;
-    const socket = io('http://localhost:3001', {
+    const socket = io(`${API_BASE_URL}`, {
       auth: { token },
     });
     socketRef.current = socket;
@@ -88,7 +91,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   useEffect(() => {
     if (!conversationId) return;
     setNotesLoading(true);
-    authFetch(`http://localhost:3001/api/chat/conversations/${conversationId}/notes`)
+    authFetch(`${API_BASE_URL}/api/chat/conversations/${conversationId}/notes`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -105,7 +108,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
     if (trimmed.split(/\s+/).length > MAX_WORDS) return;
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const author = user.email || 'Unknown';
-    await authFetch(`http://localhost:3001/api/chat/conversations/${conversationId}/notes`, {
+    await authFetch(`${API_BASE_URL}/api/chat/conversations/${conversationId}/notes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: trimmed, author }),
@@ -113,7 +116,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
     setNoteInput('');
     // Refresh notes
     setNotesLoading(true);
-    authFetch(`http://localhost:3001/api/chat/conversations/${conversationId}/notes`)
+    authFetch(`${API_BASE_URL}/api/chat/conversations/${conversationId}/notes`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -126,13 +129,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   const handleToggleHandoff = async () => {
     const newActive = !handoffActive;
     // Update backend
-    await authFetch('http://localhost:8000/api/flows/handoff/', {
+    await authFetch(`${DJANGO_API_URL}/api/flows/handoff/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversation_id: conversationId, bot_id: botId, active: newActive }),
     });
     // Always fetch handoff state from backend after toggle
-    authFetch(`http://localhost:8000/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
+    authFetch(`${DJANGO_API_URL}/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();

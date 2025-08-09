@@ -30,11 +30,13 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
   const socketRef = useRef<Socket | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  const API_BASE_URL = process.env.API_BASE_URL;
+
   // Load initial messages
   useEffect(() => {
     if (!conversationId) return;
     setLoading(true);
-    authFetch(`http://localhost:3001/api/chat/messages/${conversationId}`)
+    authFetch(`${API_BASE_URL}/api/chat/messages/${conversationId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -75,7 +77,7 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
       socketRef.current = null;
     }
 
-    const socket = io('http://localhost:3001', {
+    const socket = io(`${API_BASE_URL}`, {
       auth: { token },
     });
     socketRef.current = socket;

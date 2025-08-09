@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 import { setTokens } from '@/lib/auth';
 
-const API_BASE_URL = 'http://localhost:8000/';
+const API_BASE_URL = 'https://core.wozza.io/';
 
 const LoginForm = () => {
   const navigate = useNavigate();

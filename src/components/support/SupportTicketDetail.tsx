@@ -84,7 +84,7 @@ const SupportTicketDetail: React.FC<SupportTicketDetailProps> = ({ ticketId, onC
   };
 
   const setupSocket = () => {
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+    const socketUrl = process.env.API_BASE_URL;
     console.log('Connecting to socket:', socketUrl);
     
     const token = localStorage.getItem('token');

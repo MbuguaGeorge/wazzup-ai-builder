@@ -200,7 +200,7 @@ const Pricing = () => {
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <p className="text-muted-foreground">
+          <p className="text-muted-foreground">
               Additional charges from Meta for WhatsApp Business API usage
             </p>
           </div>
@@ -298,7 +298,7 @@ const Pricing = () => {
             <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
               <strong>Note:</strong> Meta charges are billed separately from your Wozza subscription. 
               These rates are set by Meta and may change. You'll be charged based on your actual WhatsApp usage.
-              <br />
+            <br />
               <a 
                 href="https://developers.facebook.com/docs/whatsapp/pricing" 
                 target="_blank" 

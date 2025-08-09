@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import BotSettingsPage from '@/pages/BotSettingsPage';
 import { toast } from '@/components/ui/sonner';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'https://core.wozza.io';
 
 interface Flow {
   id: string;
@@ -88,7 +88,7 @@ const Dashboard = () => {
       const analytics: any = {};
       await Promise.all(bots.map(async (bot) => {
         try {
-          const res = await authFetch(`http://localhost:3001/api/chat/stats/${bot.id}`);
+          const res = await authFetch(`${API_BASE_URL}/api/chat/stats/${bot.id}`);
           if (res.ok) {
             analytics[bot.id] = await res.json();
           }

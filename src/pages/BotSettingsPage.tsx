@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { authFetch } from '@/lib/authFetch';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'https://core.wozza.io';
 
 interface BotSettingsPageProps {
   botId: string;

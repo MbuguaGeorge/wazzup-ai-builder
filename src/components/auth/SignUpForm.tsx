@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 import { setTokens } from '@/lib/auth';
 
-const API_BASE_URL = 'http://localhost:8000'; // Change to your backend URL if needed
+const API_BASE_URL = 'https://core.wozza.io';
 
 const SignUpForm = () => {
   const navigate = useNavigate();
