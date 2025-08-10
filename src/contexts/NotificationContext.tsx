@@ -84,7 +84,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     
     setLoading(true);
     try {
-      const res = await authFetch(`${API_BASE_URL}api/notifications/?page_size=50`);
+      const res = await authFetch(`${API_BASE_URL}/api/notifications/?page_size=50`);
       if (res.ok) {
         const data = await res.json();
         const sorted = [...data.results].sort((a: Notification, b: Notification) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -106,7 +106,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (!userId) return;
     
     try {
-      const res = await authFetch(`${API_BASE_URL}api/notifications/${id}/read/`, {
+      const res = await authFetch(`${API_BASE_URL}/api/notifications/${id}/read/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_read: true })
@@ -129,7 +129,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (!userId) return;
     
     try {
-      const res = await authFetch(`${API_BASE_URL}api/notifications/mark-all-read/`, {
+      const res = await authFetch(`${API_BASE_URL}/api/notifications/mark-all-read/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });

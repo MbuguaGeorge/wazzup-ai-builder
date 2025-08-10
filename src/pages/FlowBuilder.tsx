@@ -61,6 +61,7 @@ import isEqual from 'lodash/isEqual';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { API_BASE_URL } from '@/lib/config';
 
 const nodeTypes = {
   messageNode: MessageNode,
@@ -72,8 +73,6 @@ const nodeTypes = {
   sheetNode: SheetNode,
   endNode: EndNode,
 };
-
-const API_BASE_URL = 'https://core.wozza.io';
 
 // Utility for deep cloning
 function deepClone(obj) {

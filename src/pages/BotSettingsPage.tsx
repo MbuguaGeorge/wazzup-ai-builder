@@ -13,8 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { authFetch } from '@/lib/authFetch';
-
-const API_BASE_URL = 'https://core.wozza.io';
+import { API_BASE_URL } from '@/lib/config';
 
 interface BotSettingsPageProps {
   botId: string;

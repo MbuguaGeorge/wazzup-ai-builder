@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
+import { API_BASE_URL } from '@/lib/config';
 
 // Map frontend keys to backend fields
 const FIELD_MAP = {
@@ -40,14 +41,11 @@ export const NotificationSettings = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  const API_URL = process.env.API_BASE_URL;
-  const DJANGO_API_URL = process.env.DJANGO_API_URL;
-
   // Fetch settings from backend on mount
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const res = await authFetch(`${DJANGO_API_URL}/api/notification-settings/`);
+        const res = await authFetch(`${API_BASE_URL}/api/notification-settings/`);
         const text = await res.text();
         // If response is HTML, user is probably not authenticated
         if (text.trim().startsWith('<')) {
@@ -81,7 +79,7 @@ export const NotificationSettings = () => {
     const prev = settings[setting];
     setSettings((s) => ({ ...s, [setting]: value }));
     try {
-      const res = await authFetch(`${DJANGO_API_URL}/api/notification-settings/`, {
+      const res = await authFetch(`${API_BASE_URL}/api/notification-settings/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [backendField]: value }),

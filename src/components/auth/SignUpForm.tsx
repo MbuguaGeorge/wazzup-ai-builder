@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 import { setTokens } from '@/lib/auth';
+import {API_BASE_URL} from '@/lib/config';
 
-const API_BASE_URL = 'https://core.wozza.io';
 
 const SignUpForm = () => {
   const navigate = useNavigate();

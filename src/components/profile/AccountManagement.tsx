@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { API_BASE_URL } from '@/lib/config';
 
 export const AccountManagement = () => {
   const [isExporting, setIsExporting] = useState(false);
@@ -25,9 +26,6 @@ export const AccountManagement = () => {
   const [password, setPassword] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { toast } = useToast();
-
-  const API_BASE_URL = process.env.API_BASE_URL;
-  const DJANGO_API_URL = process.env.DJANGO_API_URL;
 
   const handleExportData = async () => {
     setIsExporting(true);
@@ -55,7 +53,7 @@ export const AccountManagement = () => {
     setIsDeleting(true);
     try {
       console.log('Attempting to delete account...');
-      const response = await authFetch(`${DJANGO_API_URL}/api/delete-account/`, {
+      const response = await authFetch(`${API_BASE_URL}/api/delete-account/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -13,6 +13,7 @@ import { LogOut, Settings, User, LifeBuoy, Bell, CheckCheck } from 'lucide-react
 import { useNavigate } from 'react-router-dom';
 import NotificationDropdown from './NotificationDropdown';
 import { authFetch } from '@/lib/authFetch';
+import { API_BASE_URL } from '@/lib/config';
 
 interface DashboardHeaderProps {
   title: string;
@@ -35,15 +36,12 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
     avatarUrl: AVATAR_OPTIONS[0],
   });
 
-  const API_BASE_URL = process.env.API_BASE_URL;
-  const DJANGO_API_URL = process.env.DJANGO_API_URL;
-
   const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await authFetch(`${DJANGO_API_URL}/api/me/`);
+        const res = await authFetch(`${API_BASE_URL}/api/me/`);
         if (res.ok) {
           const userData = await res.json();
           setUser({

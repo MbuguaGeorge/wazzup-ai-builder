@@ -6,8 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 import { setTokens } from '@/lib/auth';
-
-const API_BASE_URL = 'https://core.wozza.io/';
+import {API_BASE_URL} from '@/lib/config';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -21,7 +20,7 @@ const LoginForm = () => {
     setError('');
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}api/login/`, {
+      const response = await fetch(`${API_BASE_URL}/api/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

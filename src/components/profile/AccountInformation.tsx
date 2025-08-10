@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
+import { API_BASE_URL } from '@/lib/config';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 dayjs.extend(relativeTime);
@@ -42,14 +43,11 @@ export const AccountInformation = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const API_BASE_URL = process.env.API_BASE_URL;
-  const DJANGO_API_URL = process.env.DJANGO_API_URL;
-
   // Load user data on mount
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const response = await authFetch(`${DJANGO_API_URL}/api/me/`);
+        const response = await authFetch(`${API_BASE_URL}/api/me/`);
         if (response.ok) {
           const userData = await response.json();
           setFormData({
@@ -81,7 +79,7 @@ export const AccountInformation = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const response = await authFetch(`${DJANGO_API_URL}/api/me/`, {
+      const response = await authFetch(`${API_BASE_URL}/api/me/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -142,7 +140,7 @@ export const AccountInformation = () => {
 
     setLoading(true);
     try {
-      const response = await authFetch(`${DJANGO_API_URL}/api/change-password/`, {
+      const response = await authFetch(`${API_BASE_URL}/api/change-password/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

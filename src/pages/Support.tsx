@@ -48,7 +48,7 @@ const Support = () => {
 
   const fetchTickets = async () => {
     try {
-      const response = await authFetch(`${API_BASE_URL}api/support/tickets/`);
+      const response = await authFetch(`${API_BASE_URL}/api/support/tickets/`);
       if (response.ok) {
         const data = await response.json();
         setTickets(data);
@@ -115,7 +115,7 @@ const Support = () => {
         formDataToSend.append('attachments', selectedFile);
       }
 
-      const response = await authFetch(`${API_BASE_URL}api/support/tickets/`, {
+      const response = await authFetch(`${API_BASE_URL}/api/support/tickets/`, {
         method: 'POST',
         body: formDataToSend,
       });

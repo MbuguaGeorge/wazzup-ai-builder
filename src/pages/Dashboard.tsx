@@ -19,8 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import BotSettingsPage from '@/pages/BotSettingsPage';
 import { toast } from '@/components/ui/sonner';
-
-const API_BASE_URL = 'https://core.wozza.io';
+import { API_BASE_URL } from '@/lib/config';
 
 interface Flow {
   id: string;
