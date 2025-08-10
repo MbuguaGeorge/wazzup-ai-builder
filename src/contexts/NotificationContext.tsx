@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { authFetch } from '@/lib/authFetch';
-import { API_BASE_URL } from '@/lib/config';
+import { API_BASE_URL, WEBSOCKET_URL } from '@/lib/config';
 import { io, Socket } from 'socket.io-client';
 import { jwtDecode } from 'jwt-decode';
 
@@ -233,7 +233,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      const socket: Socket = io(`${API_BASE_URL}`, {
+      const socket: Socket = io(`${WEBSOCKET_URL}`, {
         auth: { token },
         transports: ['websocket', 'polling'],
         timeout: 20000,

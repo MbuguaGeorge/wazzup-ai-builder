@@ -6,6 +6,7 @@ import { getAccessToken } from '@/lib/auth';
 import { io, Socket } from 'socket.io-client';
 import { UserCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { API_BASE_URL, WEBSOCKET_URL } from '@/lib/config';
 
 interface Conversation {
   id: string;
@@ -39,8 +40,6 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const socketRef = useRef<Socket | null>(null);
-
-  const API_BASE_URL = process.env.API_BASE_URL;
 
   useEffect(() => {
     if (!botId) return;
@@ -105,7 +104,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   useEffect(() => {
     const token = getAccessToken();
     if (token) {
-      const socket = io(`${API_BASE_URL}`, {
+      const socket = io(`${WEBSOCKET_URL}`, {
         auth: { token },
       });
       socketRef.current = socket;

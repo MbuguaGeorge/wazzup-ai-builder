@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/authFetch";
-import { API_BASE_URL } from "@/lib/config";
+import { API_BASE_URL, WEBSOCKET_URL } from "@/lib/config";
 import { io, Socket } from "socket.io-client";
 import { 
   MessageSquare, 
@@ -84,7 +84,7 @@ const SupportTicketDetail: React.FC<SupportTicketDetailProps> = ({ ticketId, onC
   };
 
   const setupSocket = () => {
-    const socketUrl = process.env.API_BASE_URL;
+    const socketUrl = WEBSOCKET_URL;
     console.log('Connecting to socket:', socketUrl);
     
     const token = localStorage.getItem('token');

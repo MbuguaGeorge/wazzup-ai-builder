@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { authFetch } from '@/lib/authFetch';
 import { io, Socket } from 'socket.io-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { API_BASE_URL, WEBSOCKET_URL } from '@/lib/config';
 
 interface ChatWindowProps {
   conversationId: string;
@@ -28,9 +29,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   const [noteInput, setNoteInput] = useState('');
   const [notesLoading, setNotesLoading] = useState(false);
   const MAX_WORDS = 30;
-
-  const API_BASE_URL = process.env.API_BASE_URL;
-  const DJANGO_API_URL = process.env.DJANGO_API_URL;
 
   // Scroll to bottom when chat is opened or message is sent
   const scrollToBottom = () => {
@@ -55,7 +53,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
       });
     // Always fetch handoff status from backend for persistence
     const fetchHandoff = () => {
-      authFetch(`${DJANGO_API_URL}/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
+      authFetch(`${API_BASE_URL}/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
         .then(async (res) => {
           if (res.ok) {
             const data = await res.json();
@@ -70,7 +68,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token || !conversationId) return;
-    const socket = io(`${API_BASE_URL}`, {
+    const socket = io(`${WEBSOCKET_URL}`, {
       auth: { token },
     });
     socketRef.current = socket;
@@ -129,13 +127,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   const handleToggleHandoff = async () => {
     const newActive = !handoffActive;
     // Update backend
-    await authFetch(`${DJANGO_API_URL}/api/flows/handoff/`, {
+    await authFetch(`${API_BASE_URL}/api/flows/handoff/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversation_id: conversationId, bot_id: botId, active: newActive }),
     });
     // Always fetch handoff state from backend after toggle
-    authFetch(`${DJANGO_API_URL}/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
+    authFetch(`${API_BASE_URL}/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();

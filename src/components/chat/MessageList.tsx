@@ -5,6 +5,7 @@ import { authFetch } from '@/lib/authFetch';
 import { getAccessToken } from '@/lib/auth';
 import { io, Socket } from 'socket.io-client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { API_BASE_URL, WEBSOCKET_URL } from '@/lib/config';
 
 interface Message {
   id: string;
@@ -29,8 +30,6 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
   const [isInitialized, setIsInitialized] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  const API_BASE_URL = process.env.API_BASE_URL;
 
   // Load initial messages
   useEffect(() => {
@@ -77,7 +76,7 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
       socketRef.current = null;
     }
 
-    const socket = io(`${API_BASE_URL}`, {
+    const socket = io(`${WEBSOCKET_URL}`, {
       auth: { token },
     });
     socketRef.current = socket;
