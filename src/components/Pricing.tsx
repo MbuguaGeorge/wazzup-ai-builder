@@ -53,7 +53,7 @@ const Pricing = () => {
       highlighted: true
     },
     {
-      name: "Pro",
+      name: "Scale",
       price: "$149",
       period: "/month",
       description: "For high-volume businesses and enterprises",
