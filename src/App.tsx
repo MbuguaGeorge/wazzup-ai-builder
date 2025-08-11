@@ -6,6 +6,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import CheckEmail from "./pages/CheckEmail";
+import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import FlowBuilder from "./pages/FlowBuilder";
 import NotFound from "./pages/NotFound";
@@ -27,8 +29,8 @@ function isAuthenticated() {
   return Boolean(localStorage.getItem('token'));
 }
 
-function PrivateRoute({ children }: { children: JSX.Element }) {
-  return isAuthenticated() ? children : <Navigate to="/login" replace />;
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  return isAuthenticated() ? <>{children}</> : <Navigate to="/login" />;
 }
 
 const App = () => (
@@ -42,6 +44,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/check-email" element={<CheckEmail />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           
           <Route path="/dashboard" element={<PrivateRoute><DashboardLayout title="Dashboard" /></PrivateRoute>}>
             <Route index element={<Dashboard />} />

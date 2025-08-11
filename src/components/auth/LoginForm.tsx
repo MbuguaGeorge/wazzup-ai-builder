@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Lock } from 'lucide-react';
 import { setTokens } from '@/lib/auth';
-import {API_BASE_URL} from '@/lib/config';
+import { API_BASE_URL } from '@/lib/config';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -28,6 +28,7 @@ const LoginForm = () => {
         body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
+      
       if (response.ok && data.token) {
         setTokens(data.token, data.refresh);
         // Store user data in localStorage (fix)
@@ -36,7 +37,17 @@ const LoginForm = () => {
         }
         navigate('/dashboard');
       } else {
-        setError(data.error || 'Login failed. Please check your credentials.');
+        // Handle specific error cases
+        if (response.status === 403 && data.email_not_verified) {
+          // Email exists but not verified
+          setError('Please check your email for the verification code to complete your registration.');
+        } else if (response.status === 404) {
+          // Email doesn't exist
+          setError(data.error);
+        } else {
+          // Other errors (wrong password, etc.)
+          setError(data.error || 'Login failed. Please check your credentials.');
+        }
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -49,50 +60,70 @@ const LoginForm = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex items-center justify-center p-4">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+            <Lock className="w-8 h-8 text-primary" />
+          </div>
+          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
           <CardDescription>
-            Log in to your account to continue building
+            Sign in to your Wozza account to continue building
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
-              </div>
-              
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" placeholder="••••••••" required value={password} onChange={e => setPassword(e.target.value)} />
-              </div>
+        
+        <CardContent className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
 
-            {error && <div className="text-red-500 text-sm text-center">{error}</div>}
+            {error && (
+              <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-md border border-red-200">
+                {error}
+              </div>
+            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Logging in...' : 'Log In'}
+              {loading ? 'Signing In...' : 'Sign In'}
             </Button>
-
-            <div className="text-center text-sm text-muted-foreground">
-              Don't have an account?{' '}
-              <button
-                type="button"
-                onClick={() => navigate('/signup')}
-                className="text-primary hover:underline"
-              >
-                Sign up
-              </button>
-            </div>
           </form>
 
-          <div className="mt-6">
+          <div className="text-center text-sm text-muted-foreground">
+            Don't have an account?{' '}
             <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate('/')}
+              variant="link"
+              className="p-0 h-auto text-primary hover:text-primary/80"
+              onClick={() => navigate('/signup')}
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              Sign up
+            </Button>
+          </div>
+
+          <div className="pt-4 border-t">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/')}
+              className="w-full"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
             </Button>
           </div>
