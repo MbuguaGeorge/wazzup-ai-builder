@@ -44,7 +44,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   useEffect(() => {
     if (!botId) return;
     setLoading(true);
-    authFetch(`${API_BASE_URL}/api/chat/conversations/${botId}`)
+    authFetch(`${WEBSOCKET_URL}/api/chat/conversations/${botId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -52,7 +52,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
             (data.conversations || []).map(async (conv: any) => {
               try {
                 // Get the last message for this conversation
-                const messagesRes = await authFetch(`${API_BASE_URL}/api/chat/messages/${conv.conversation_id}`);
+                const messagesRes = await authFetch(`${WEBSOCKET_URL}/api/chat/messages/${conv.conversation_id}`);
                 if (messagesRes.ok) {
                   const messagesData = await messagesRes.json();
                   const messages = messagesData.messages || [];
@@ -176,7 +176,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
         const conversationsWithMessages = await Promise.all(
           conversations.map(async (conv) => {
             try {
-              const res = await authFetch(`${API_BASE_URL}/api/chat/messages/${conv.id}`);
+              const res = await authFetch(`${WEBSOCKET_URL}/api/chat/messages/${conv.id}`);
               if (res.ok) {
                 const data = await res.json();
                 return { ...conv, messages: data.messages || [] };

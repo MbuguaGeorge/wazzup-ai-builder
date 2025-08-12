@@ -4,6 +4,7 @@ export const API_BASE_URL = 'https://core.wozza.io';
 
 // WebSocket Configuration for real-time connections
 export const WEBSOCKET_URL = 'https://realtime.wozza.io';
+// export const WEBSOCKET_URL = 'http://localhost:3001';
 
 // App Configuration
 export const APP_CONFIG = {

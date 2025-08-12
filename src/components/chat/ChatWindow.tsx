@@ -43,7 +43,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
 
   useEffect(() => {
     if (!conversationId) return;
-    authFetch(`${API_BASE_URL}/api/chat/conversations/${botId}`)
+    authFetch(`${WEBSOCKET_URL}/api/chat/conversations/${botId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -89,7 +89,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   useEffect(() => {
     if (!conversationId) return;
     setNotesLoading(true);
-    authFetch(`${API_BASE_URL}/api/chat/conversations/${conversationId}/notes`)
+    authFetch(`${WEBSOCKET_URL}/api/chat/conversations/${conversationId}/notes`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -106,7 +106,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
     if (trimmed.split(/\s+/).length > MAX_WORDS) return;
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const author = user.email || 'Unknown';
-    await authFetch(`${API_BASE_URL}/api/chat/conversations/${conversationId}/notes`, {
+    await authFetch(`${WEBSOCKET_URL}/api/chat/conversations/${conversationId}/notes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: trimmed, author }),
@@ -114,7 +114,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
     setNoteInput('');
     // Refresh notes
     setNotesLoading(true);
-    authFetch(`${API_BASE_URL}/api/chat/conversations/${conversationId}/notes`)
+    authFetch(`${WEBSOCKET_URL}/api/chat/conversations/${conversationId}/notes`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();

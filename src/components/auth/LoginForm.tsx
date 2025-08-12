@@ -46,7 +46,7 @@ const LoginForm = () => {
           setError(data.error);
         } else {
           // Other errors (wrong password, etc.)
-          setError(data.error || 'Login failed. Please check your credentials.');
+        setError(data.error || 'Login failed. Please check your credentials.');
         }
       }
     } catch (err) {
@@ -72,7 +72,7 @@ const LoginForm = () => {
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -81,10 +81,10 @@ const LoginForm = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
-            </div>
-            
+              </div>
+              
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -106,16 +106,16 @@ const LoginForm = () => {
             </Button>
           </form>
 
-          <div className="text-center text-sm text-muted-foreground">
-            Don't have an account?{' '}
+            <div className="text-center text-sm text-muted-foreground">
+              Don't have an account?{' '}
             <Button
               variant="link"
               className="p-0 h-auto text-primary hover:text-primary/80"
-              onClick={() => navigate('/signup')}
-            >
-              Sign up
+                onClick={() => navigate('/signup')}
+              >
+                Sign up
             </Button>
-          </div>
+            </div>
 
           <div className="pt-4 border-t">
             <Button

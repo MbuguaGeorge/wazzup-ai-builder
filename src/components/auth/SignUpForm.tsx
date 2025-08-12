@@ -75,10 +75,10 @@ const SignUpForm = () => {
                 onChange={(e) => setFullName(e.target.value)}
                 required
               />
-            </div>
-            
+              </div>
+              
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -87,10 +87,10 @@ const SignUpForm = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
-            </div>
-            
+              </div>
+              
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -113,16 +113,16 @@ const SignUpForm = () => {
             </Button>
           </form>
 
-          <div className="text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
+            <div className="text-center text-sm text-muted-foreground">
+              Already have an account?{' '}
             <Button
               variant="link"
               className="p-0 h-auto text-primary hover:text-primary/80"
-              onClick={() => navigate('/login')}
-            >
+                onClick={() => navigate('/login')}
+              >
               Sign in
             </Button>
-          </div>
+            </div>
 
           <div className="pt-4 border-t">
             <Button

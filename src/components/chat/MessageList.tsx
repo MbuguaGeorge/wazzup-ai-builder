@@ -35,7 +35,7 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
   useEffect(() => {
     if (!conversationId) return;
     setLoading(true);
-    authFetch(`${API_BASE_URL}/api/chat/messages/${conversationId}`)
+    authFetch(`${WEBSOCKET_URL}/api/chat/messages/${conversationId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();

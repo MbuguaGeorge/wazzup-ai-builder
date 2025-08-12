@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import BotSettingsPage from '@/pages/BotSettingsPage';
 import { toast } from '@/components/ui/sonner';
-import { API_BASE_URL } from '@/lib/config';
+import { API_BASE_URL, WEBSOCKET_URL } from '@/lib/config';
 
 interface Flow {
   id: string;
@@ -87,7 +87,7 @@ const Dashboard = () => {
       const analytics: any = {};
       await Promise.all(bots.map(async (bot) => {
         try {
-          const res = await authFetch(`${API_BASE_URL}/api/chat/stats/${bot.id}`);
+          const res = await authFetch(`${WEBSOCKET_URL}/api/chat/stats/${bot.id}`);
           if (res.ok) {
             analytics[bot.id] = await res.json();
           }
