@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useRef, useCallback } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,31 @@ import DeleteButton from './DeleteButton';
 import { useEffect } from 'react';
 import { authFetch } from '@/lib/authFetch';
 import { API_BASE_URL } from '@/lib/config';
+
+
+const useBroadcastChannel = (channelName: string) => {
+  const [message, setMessage] = useState(null);
+  const channel = useRef(null);
+  
+  useEffect(() => {
+    channel.current = new BroadcastChannel(channelName);
+    
+    channel.current.addEventListener('message', (event) => {
+      setMessage(event.data);
+    });
+    
+    return () => {
+      channel.current?.close();
+    };
+  }, [channelName]);
+  
+  const sendMessage = useCallback((data) => {
+    channel.current?.postMessage(data);
+  }, []);
+  
+  return { message, sendMessage };
+};
+
 
 const AINode = ({ data, isConnectable, id }: NodeProps) => {
   const [newLink, setNewLink] = useState('');
@@ -25,7 +50,7 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
     };
   } | null>(null);
   const popupRef = React.useRef<Window | null>(null);
-
+  const { message, sendMessage } = useBroadcastChannel('google-oauth');
   const onUpdate = data.onUpdate || (() => {});
   const onFilesChange = data.onFilesChange || (() => {});
   const onFileRemove = data.onFileRemove || (() => {});
@@ -57,37 +82,65 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
     fetchTrialStatus();
   }, []);
 
+  // Reusable function to check Google OAuth status
+  const checkGoogleStatus = async () => {
+    try {
+      console.log('🔍 Checking Google OAuth status...');
+      const res = await authFetch(`${API_BASE_URL}/api/google-oauth/status/`);
+      const result = await res.json();
+      console.log('✅ Google OAuth status response:', result);
+      setGoogleAuth(!!result.authorized);
+      console.log('🔧 Updated googleAuth state to:', !!result.authorized);
+      return result.authorized;
+    } catch (e) {
+      console.error('❌ Error checking Google OAuth status:', e);
+      setGoogleAuth(false);
+      return false;
+    }
+  };
+
+  // Check Google OAuth status on component mount
+  useEffect(() => {
+    checkGoogleStatus();
+  }, []);
+
   // Listen for OAuth popup message
   useEffect(() => {
-    function handleMessage(event: MessageEvent) {
-      if (event.data && event.data.type === 'google_oauth_success') {
-        setGoogleAuth(true);
+    if (message) {
+      if (message.type === 'google_oauth_success') {
+        console.log('🎉 OAuth success message received (prop)');
+        // Instead of directly setting state, check the actual backend status
+        checkGoogleStatus();
         setAuthError(null);
         if (popupRef.current) popupRef.current.close();
-      } else if (event.data && event.data.type === 'google_oauth_error') {
+      } else if (message.type === 'google_oauth_error') {
+        console.log('❌ OAuth error message received (prop)');
         setAuthError('Google authorization failed. Please try again.');
         setGoogleAuth(false);
         if (popupRef.current) popupRef.current.close();
       }
     }
+  }, [message]);
+
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.data && event.data.type === 'google_oauth_success') {
+        console.log('🎉 OAuth success message received (window event):', event.data);
+        // Instead of directly setting state, check the actual backend status
+        checkGoogleStatus();
+        setAuthError(null);
+        if (popupRef.current) popupRef.current.close();
+      } else if (event.data && event.data.type === 'google_oauth_error') {
+        console.log('❌ OAuth error message received (window event):', event.data);
+        setAuthError('Google authorization failed. Please try again.');
+        setGoogleAuth(false);
+        if (popupRef.current) popupRef.current.close();
+      }
+    }
+    
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
-
-  useEffect(() => {
-    async function checkGoogleStatus() {
-      try {
-        const res = await authFetch(`${API_BASE_URL}/api/google-oauth/status/`);
-        const result = await res.json();
-        setGoogleAuth(!!result.authorized);
-      } catch (e) {
-        setGoogleAuth(false);
-      }
-    }
-    checkGoogleStatus();
-  }, []);
-
-  // Removed demo useEffect for auth expiration
 
   const handleGoogleAuth = async () => {
     setAuthChecking(true);
@@ -104,6 +157,7 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
         'GoogleAuthPopup',
         `width=${width},height=${height},left=${left},top=${top}`
       );
+
       popupRef.current = popup;
     } catch (e) {
       setAuthError('Failed to initiate Google OAuth.');
@@ -121,16 +175,24 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
       await authFetch(`${API_BASE_URL}/api/upsert-gdrive-link/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ link: newLink, flow_id: data.flow_id }),
+        body: JSON.stringify({ link: newLink, flow_id: data.flow_id, node_id: id }),
         credentials: 'include'
       });
       console.log(`Adding link: ${newLink} to flow ID: ${data.flow_id}`);
     }
   };
 
-  const handleRemoveLink = (linkToRemove: string) => {
+  const handleRemoveLink = async (linkToRemove: string) => {
     const updatedLinks = data.gdrive_links?.filter((link: string) => link !== linkToRemove);
     onUpdate({ gdrive_links: updatedLinks });
+
+    await authFetch(`${API_BASE_URL}/api/delete-gdrive-link/`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ link: linkToRemove, flow_id: data.flow_id, node_id: id }),
+      credentials: 'include'
+    });
+    console.log(`Removing link: ${linkToRemove} from flow ID: ${data.flow_id}`);
   };
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {

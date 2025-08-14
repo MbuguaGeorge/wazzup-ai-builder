@@ -54,6 +54,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { useParams } from 'react-router-dom';
 import { authFetch } from '@/lib/authFetch';
+import { clearTokens } from '@/lib/auth';
 import { toast } from '@/components/ui/sonner';
 import { useBeforeUnload } from 'react-router-dom';
 import { toast as useToast } from "@/components/ui/use-toast";
@@ -98,11 +99,13 @@ const FlowBuilder = () => {
   const [flowNameError, setFlowNameError] = useState('');
   const [unsaved, setUnsaved] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isValidatingToken, setIsValidatingToken] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const lastSaved = useRef<{ nodes: Node[], edges: Edge[] } | null>(null);
   const [invalidEdgeIds, setInvalidEdgeIds] = useState<string[]>([]);
   const [loopDetected, setLoopDetected] = useState(false);
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChanged, setIsChanged] = useState(false);
   const [initialFlowData, setInitialFlowData] = useState(null);
@@ -122,11 +125,187 @@ const FlowBuilder = () => {
             setSelectedFlow(active);
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        // If authFetch fails, it will redirect to login automatically
+        console.error('Failed to fetch flows:', err);
+        // Show user-friendly message and force redirect
+        toast.error('Session expired. Redirecting to login...');
+        
+        // Force redirect to login as backup
+        setTimeout(() => {
+          window.location.replace('/login');
+        }, 1000);
+      }
       setIsLoading(false);
     }
     fetchFlows();
   }, [botId]);
+
+  // Immediate token validation on page load
+  useEffect(() => {
+    const validateTokenOnLoad = async () => {
+      setIsValidatingToken(true);
+      try {
+        if (botId) {
+          // Make a lightweight API call to validate token immediately
+          const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
+          if (!response.ok) {
+            // If this fails, authFetch will handle redirect to login
+            throw new Error('Token validation failed');
+          }
+        }
+      } catch (error) {
+        // authFetch will handle token refresh or redirect to login
+        console.log('Token validation on load completed');
+        
+        // Backup redirect mechanism
+        setTimeout(() => {
+          if (window.location.pathname !== '/login') {
+            window.location.replace('/login');
+          }
+        }, 1500);
+      } finally {
+        setIsValidatingToken(false);
+      }
+    };
+
+    validateTokenOnLoad();
+  }, [botId]);
+
+  // Periodic token check to ensure tokens are refreshed even when idle
+  useEffect(() => {
+    const tokenCheckInterval = setInterval(async () => {
+      try {
+        // Make a lightweight API call to check token validity
+        if (botId) {
+          await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
+        }
+      } catch (error) {
+        // authFetch will handle token refresh or redirect to login
+        console.log('Token check completed');
+      }
+    }, 2 * 60 * 1000); // Check every 2 minutes (more frequent)
+
+    return () => clearInterval(tokenCheckInterval);
+  }, [botId]);
+
+  // Check token when user returns to the tab
+  useEffect(() => {
+    const handleFocus = async () => {
+      try {
+        if (botId) {
+          await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
+        }
+      } catch (error) {
+        // authFetch will handle token refresh or redirect to login
+        console.log('Token check on focus completed');
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [botId]);
+
+  // Token validation on user activity (mouse move, click, keypress)
+  useEffect(() => {
+    let activityTimeout: NodeJS.Timeout;
+    
+    const handleUserActivity = () => {
+      // Clear existing timeout
+      clearTimeout(activityTimeout);
+      
+      // Set new timeout to validate token after user stops being active
+      activityTimeout = setTimeout(async () => {
+        try {
+          if (botId) {
+            await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
+          }
+        } catch (error) {
+          // authFetch will handle token refresh or redirect to login
+          console.log('Token check on user activity completed');
+        }
+      }, 30000); // 30 seconds after user stops being active
+    };
+
+    // Listen for user activity
+    const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserActivity, { passive: true });
+    });
+
+    return () => {
+      clearTimeout(activityTimeout);
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserActivity);
+      });
+    };
+  }, [botId]);
+
+  // Token validation function for critical operations
+  const validateToken = async () => {
+    try {
+      if (botId) {
+        await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      // authFetch will handle token refresh or redirect to login
+      return false;
+    }
+  };
+
+  // Force redirect mechanism for expired tokens
+  useEffect(() => {
+    let redirectAttempts = 0;
+    const maxRedirectAttempts = 3;
+    
+    const attemptRedirect = () => {
+      if (redirectAttempts >= maxRedirectAttempts || isRedirecting) {
+        // Stop trying to redirect after 3 attempts or if already redirecting
+        console.log('Max redirect attempts reached or already redirecting, stopping redirect loop');
+        return;
+      }
+      
+      redirectAttempts++;
+      setIsRedirecting(true);
+      
+      // Check if we're still on FlowBuilder but should be redirected
+      if (window.location.pathname.includes('/flow-builder') || window.location.pathname.includes('/bot/')) {
+        // Check if we have valid tokens
+        const token = localStorage.getItem('token');
+        if (!token) {
+          // No token, force redirect
+          console.log('No token found, redirecting to login...');
+          window.location.replace('/login');
+          return;
+        }
+        
+        // Only check token once, not continuously
+        fetch(`${API_BASE_URL}/api/bots/${botId}/flows/`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(response => {
+          if (response.status === 401) {
+            // Token expired, force redirect
+            console.log('Token expired, redirecting to login...');
+            clearTokens();
+            window.location.replace('/login');
+          }
+        }).catch(() => {
+          // API call failed, force redirect
+          console.log('API call failed, redirecting to login...');
+          window.location.replace('/login');
+        });
+      }
+    };
+    
+    // Only check once after a delay, not continuously
+    const redirectTimeout = setTimeout(attemptRedirect, 10000); // Check after 10 seconds
+    
+    return () => {
+      clearTimeout(redirectTimeout);
+    };
+  }, [botId, isRedirecting]);
 
   useEffect(() => {
     if (selectedFlow && !isEqual(initialFlowData, { nodes, edges })) {
@@ -169,8 +348,21 @@ const FlowBuilder = () => {
   }
 
   const handleFileChange = async (nodeId: string, filesToUpload: File[]) => {
-    const originalNode = nodes.find(n => n.id === nodeId);
-    if (!originalNode || !selectedFlow) return;
+    if (!selectedFlow) return;
+
+    // Validate token before uploading
+    const tokenValid = await validateToken();
+    if (!tokenValid) {
+      if (!isRedirecting) {
+        setIsRedirecting(true);
+        toast.error('Session expired. Redirecting to login...');
+        // Force redirect immediately
+        setTimeout(() => {
+          window.location.replace('/login');
+        }, 1000);
+      }
+      return;
+    }
 
     // 1. Optimistic UI update
     const optimisticFiles = filesToUpload.map(file => ({
@@ -228,10 +420,23 @@ const FlowBuilder = () => {
   };
 
   const handleFileRemove = async (nodeId: string, fileToRemove: any) => {
-    const originalNode = nodes.find(n => n.id === nodeId);
-    if (!originalNode || !selectedFlow) return;
+    if (!selectedFlow) return;
 
-    const originalFiles = originalNode.data.files;
+    // Validate token before removing
+    const tokenValid = await validateToken();
+    if (!tokenValid) {
+      if (!isRedirecting) {
+        setIsRedirecting(true);
+        toast.error('Session expired. Redirecting to login...');
+        // Force redirect immediately
+        setTimeout(() => {
+          window.location.replace('/login');
+        }, 1000);
+      }
+      return;
+    }
+
+    const originalFiles = nodes.find(n => n.id === nodeId)?.data.files;
 
     // 1. Optimistic UI update
     setNodes(nds => nds.map(n => {
@@ -508,6 +713,21 @@ const FlowBuilder = () => {
 
   const handleCreateFlow = async () => {
     if (!validateFlowName(newFlowName) || !botId) return;
+    
+    // Validate token before creating
+    const tokenValid = await validateToken();
+    if (!tokenValid) {
+      if (!isRedirecting) {
+        setIsRedirecting(true);
+        toast.error('Session expired. Redirecting to login...');
+        // Force redirect immediately
+        setTimeout(() => {
+          window.location.replace('/login');
+        }, 1000);
+      }
+      return;
+    }
+    
     try {
       const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`, {
         method: 'POST',
@@ -540,6 +760,21 @@ const FlowBuilder = () => {
         edges: deepClone(data.flow_data.edges),
       };
     }
+    
+    // Validate token before updating
+    const tokenValid = await validateToken();
+    if (!tokenValid) {
+      if (!isRedirecting) {
+        setIsRedirecting(true);
+        toast.error('Session expired. Redirecting to login...');
+        // Force redirect immediately
+        setTimeout(() => {
+          window.location.replace('/login');
+        }, 1000);
+      }
+      return;
+    }
+    
     try {
       const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
         method: 'PATCH',
@@ -645,10 +880,19 @@ const FlowBuilder = () => {
   }, [unsaved]);
 
   const handleSave = async () => {
-    if (!selectedFlow) return;
-    validateFlow(nodes, edges);
-    if (validationIssues.length > 0) {
-      toast.error("Cannot save flow with validation issues. Please fix them first.");
+    if (!selectedFlow || !canEdit) return;
+    
+    // Validate token before saving
+    const tokenValid = await validateToken();
+    if (!tokenValid) {
+      if (!isRedirecting) {
+        setIsRedirecting(true);
+        toast.error('Session expired. Redirecting to login...');
+        // Force redirect immediately
+        setTimeout(() => {
+          window.location.replace('/login');
+        }, 1000);
+      }
       return;
     }
 
@@ -765,6 +1009,14 @@ const FlowBuilder = () => {
               </Tabs>
 
               <div className="flex items-center gap-2">
+                {/* Token validation indicator */}
+                {isValidatingToken && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    <span>Validating session...</span>
+                  </div>
+                )}
+                
                 <Button variant="ghost" size="sm" className="gap-2">
                   <Play className="w-4 h-4" />
                   Test Flow
