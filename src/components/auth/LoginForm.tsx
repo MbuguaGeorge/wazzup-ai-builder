@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Lock } from 'lucide-react';
-import { setTokens } from '@/lib/auth';
-import { API_BASE_URL } from '@/lib/config';
+import { cookieAuth } from '@/lib/cookieAuth';
+import { setTokens } from '@/lib/auth'; // Keep for fallback JWT support
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -19,38 +19,48 @@ const LoginForm = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/api/login/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
+      // Use cookie-based authentication
+      const data = await cookieAuth.login(email, password, true);
       
-      if (response.ok && data.token) {
-        setTokens(data.token, data.refresh);
-        // Store user data in localStorage (fix)
-        if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
-        }
-        navigate('/dashboard');
-      } else {
-        // Handle specific error cases
-        if (response.status === 403 && data.email_not_verified) {
-          // Email exists but not verified
-          setError('Please check your email for the verification code to complete your registration.');
-        } else if (response.status === 404) {
-          // Email doesn't exist
-          setError(data.error);
-        } else {
-          // Other errors (wrong password, etc.)
-        setError(data.error || 'Login failed. Please check your credentials.');
+      // Store user data in localStorage for quick access
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      
+      // Handle both authentication methods
+      if (data.authentication_method === 'session') {
+        // Clear any old JWT tokens since we're using cookies now
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh');
+      } else if (data.authentication_method === 'jwt') {
+        // Store JWT tokens for fallback
+        if (data.token && data.refresh) {
+          setTokens(data.token, data.refresh);
         }
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
+      
+      // Small delay to ensure all data is stored before navigation
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 100);
+      
+    } catch (err: any) {
+      // Handle specific error messages from the backend
+      const errorMessage = err.message;
+      
+      if (errorMessage.includes('verification code')) {
+        setError('Please check your email for the verification code to complete your registration.');
+      } else if (errorMessage.includes('No account found')) {
+        setError('No account found with this email address. Please check your email or sign up for a new account.');
+      } else if (errorMessage.includes('Invalid email or password')) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else if (errorMessage.includes('scheduled for deletion')) {
+        setError('Your account is scheduled for deletion. Please contact support if you need to restore it.');
+      } else {
+        setError(errorMessage || 'Login failed. Please check your credentials and try again.');
+      }
     } finally {
       setLoading(false);
     }

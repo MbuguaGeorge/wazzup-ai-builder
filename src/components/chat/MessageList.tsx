@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './MessageBubble';
-import { authFetch } from '@/lib/authFetch';
+import { nodeFetch } from '@/lib/cookieAuth';
 import { getAccessToken } from '@/lib/auth';
 import { io, Socket } from 'socket.io-client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,7 +35,7 @@ export const MessageList = forwardRef<any, MessageListProps>(({ conversationId }
   useEffect(() => {
     if (!conversationId) return;
     setLoading(true);
-    authFetch(`${WEBSOCKET_URL}/api/chat/messages/${conversationId}`)
+    nodeFetch(`${WEBSOCKET_URL}/api/chat/messages/${conversationId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();

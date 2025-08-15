@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/authFetch";
+import { cookieFetch } from "@/lib/cookieAuth";
 import { API_BASE_URL, WEBSOCKET_URL } from "@/lib/config";
 import { io, Socket } from "socket.io-client";
 import { 
@@ -60,7 +61,7 @@ const SupportTicketDetail: React.FC<SupportTicketDetailProps> = ({ ticketId, onC
 
   const fetchTicket = async () => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/support/tickets/${ticketId}/`);
+      const response = await cookieFetch(`${API_BASE_URL}/api/support/tickets/${ticketId}/`);
       if (response.ok) {
         const data = await response.json();
         setTicket(data);
@@ -174,7 +175,7 @@ const SupportTicketDetail: React.FC<SupportTicketDetailProps> = ({ ticketId, onC
         });
       } else {
         // Fallback to direct API call if no socket
-        const response = await authFetch(`${API_BASE_URL}/api/support/tickets/${ticketId}/responses/`, {
+        const response = await cookieFetch(`${API_BASE_URL}/api/support/tickets/${ticketId}/responses/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -207,7 +208,7 @@ const SupportTicketDetail: React.FC<SupportTicketDetailProps> = ({ ticketId, onC
 
   const handleStatusUpdate = async (newStatus: string) => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/support/tickets/${ticketId}/status/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/support/tickets/${ticketId}/status/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

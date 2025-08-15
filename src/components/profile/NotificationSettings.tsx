@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
+import { cookieFetch } from '@/lib/cookieAuth';
 import { API_BASE_URL } from '@/lib/config';
 
 // Map frontend keys to backend fields
@@ -40,36 +41,45 @@ export const NotificationSettings = () => {
     newChatStarted: false,
   });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   // Fetch settings from backend on mount
   useEffect(() => {
-    async function fetchSettings() {
+    const loadSettings = async () => {
       try {
-        const res = await authFetch(`${API_BASE_URL}/api/notification-settings/`);
-        const text = await res.text();
-        // If response is HTML, user is probably not authenticated
-        if (text.trim().startsWith('<')) {
-          toast({ title: 'Error', description: 'You must be logged in to view notification settings.', variant: 'destructive' });
-          setLoading(false);
-          return;
-        }
+        const res = await cookieFetch(`${API_BASE_URL}/api/notification-settings/`);
+        
         if (res.ok) {
-          const data = JSON.parse(text);
-          const newSettings: any = { ...settings };
-          Object.entries(REVERSE_FIELD_MAP).forEach(([backend, frontend]) => {
-            if (backend in data) newSettings[frontend] = data[backend];
+          const data = await res.json();
+          
+          // Convert backend field names (snake_case) to frontend field names (camelCase)
+          const mappedSettings = {};
+          Object.entries(REVERSE_FIELD_MAP).forEach(([backendField, frontendField]) => {
+            if (backendField in data) {
+              mappedSettings[frontendField] = data[backendField];
+            }
           });
-          setSettings(newSettings);
+          
+          setSettings(prevSettings => ({ ...prevSettings, ...mappedSettings }));
         } else {
-          toast({ title: 'Error', description: 'Failed to load notification settings', variant: 'destructive' });
+          const errorText = await res.text();
+          toast({ 
+            title: 'Error', 
+            description: `Failed to load notification settings (${res.status})`, 
+            variant: 'destructive' 
+          });
         }
-      } catch (e) {
-        toast({ title: 'Error', description: 'Failed to load notification settings', variant: 'destructive' });
+      } catch (error) {
+        toast({ 
+          title: 'Error', 
+          description: 'Failed to load notification settings - network error', 
+          variant: 'destructive' 
+        });
       } finally {
         setLoading(false);
       }
-    }
-    fetchSettings();
+    };
+    loadSettings();
     // eslint-disable-next-line
   }, []);
 
@@ -77,20 +87,53 @@ export const NotificationSettings = () => {
   const handleSettingChange = async (setting: string, value: boolean) => {
     const backendField = FIELD_MAP[setting];
     const prev = settings[setting];
+    
+    
     setSettings((s) => ({ ...s, [setting]: value }));
     try {
-      const res = await authFetch(`${API_BASE_URL}/api/notification-settings/`, {
+      const res = await cookieFetch(`${API_BASE_URL}/api/notification-settings/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [backendField]: value }),
       });
-      if (!res.ok) {
+      
+      if (res.ok) {
+        const updatedData = await res.json();
+        toast({ 
+          title: 'Success', 
+          description: 'Notification setting updated',
+          duration: 2000
+        });
+      } else {
+        console.error('❌ Failed to update notification setting:', res.status, res.statusText);
         setSettings((s) => ({ ...s, [setting]: prev }));
         toast({ title: 'Error', description: 'Failed to update notification setting', variant: 'destructive' });
       }
     } catch (e) {
+      console.error('❌ Error updating notification setting:', e);
       setSettings((s) => ({ ...s, [setting]: prev }));
       toast({ title: 'Error', description: 'Failed to update notification setting', variant: 'destructive' });
+    }
+  };
+
+  const saveSettings = async () => {
+    setSaving(true);
+    try {
+      const res = await cookieFetch(`${API_BASE_URL}/api/notification-settings/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+      if (res.ok) {
+        toast({ title: 'Success', description: 'Notification settings updated successfully' });
+      } else {
+        toast({ title: 'Error', description: 'Failed to update notification settings', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+      toast({ title: 'Error', description: 'Failed to update notification settings', variant: 'destructive' });
+    } finally {
+      setSaving(false);
     }
   };
 

@@ -13,6 +13,7 @@ import { LogOut, Settings, User, LifeBuoy, Bell, CheckCheck } from 'lucide-react
 import { useNavigate } from 'react-router-dom';
 import NotificationDropdown from './NotificationDropdown';
 import { authFetch } from '@/lib/authFetch';
+import { cookieFetch } from '@/lib/cookieAuth';
 import { API_BASE_URL } from '@/lib/config';
 
 interface DashboardHeaderProps {
@@ -41,7 +42,7 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await authFetch(`${API_BASE_URL}/api/me/`);
+        const res = await cookieFetch(`${API_BASE_URL}/api/me/`);
         if (res.ok) {
           const userData = await res.json();
           setUser({

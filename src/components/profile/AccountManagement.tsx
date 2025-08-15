@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { authFetch } from '@/lib/authFetch';
+import { cookieFetch } from '@/lib/cookieAuth';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,7 +54,7 @@ export const AccountManagement = () => {
     setIsDeleting(true);
     try {
       console.log('Attempting to delete account...');
-      const response = await authFetch(`${API_BASE_URL}/api/delete-account/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/delete-account/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

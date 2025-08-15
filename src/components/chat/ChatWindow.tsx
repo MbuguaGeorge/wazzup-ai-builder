@@ -8,7 +8,7 @@ import { MessageList } from './MessageList';
 import { MessageComposer } from './MessageComposer';
 import { User, Bot, Phone, MoreVertical, FileText, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { authFetch } from '@/lib/authFetch';
+import { nodeFetch, cookieFetch } from '@/lib/cookieAuth';
 import { io, Socket } from 'socket.io-client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { API_BASE_URL, WEBSOCKET_URL } from '@/lib/config';
@@ -43,7 +43,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
 
   useEffect(() => {
     if (!conversationId) return;
-    authFetch(`${WEBSOCKET_URL}/api/chat/conversations/${botId}`)
+    nodeFetch(`${WEBSOCKET_URL}/api/chat/conversations/${botId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -53,7 +53,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
       });
     // Always fetch handoff status from backend for persistence
     const fetchHandoff = () => {
-      authFetch(`${API_BASE_URL}/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
+      cookieFetch(`${API_BASE_URL}/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
         .then(async (res) => {
           if (res.ok) {
             const data = await res.json();
@@ -89,7 +89,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   useEffect(() => {
     if (!conversationId) return;
     setNotesLoading(true);
-    authFetch(`${WEBSOCKET_URL}/api/chat/conversations/${conversationId}/notes`)
+    nodeFetch(`${WEBSOCKET_URL}/api/chat/conversations/${conversationId}/notes`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -106,7 +106,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
     if (trimmed.split(/\s+/).length > MAX_WORDS) return;
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const author = user.email || 'Unknown';
-    await authFetch(`${WEBSOCKET_URL}/api/chat/conversations/${conversationId}/notes`, {
+    await nodeFetch(`${WEBSOCKET_URL}/api/chat/conversations/${conversationId}/notes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: trimmed, author }),
@@ -114,7 +114,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
     setNoteInput('');
     // Refresh notes
     setNotesLoading(true);
-    authFetch(`${WEBSOCKET_URL}/api/chat/conversations/${conversationId}/notes`)
+    nodeFetch(`${WEBSOCKET_URL}/api/chat/conversations/${conversationId}/notes`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -127,13 +127,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, botId })
   const handleToggleHandoff = async () => {
     const newActive = !handoffActive;
     // Update backend
-    await authFetch(`${API_BASE_URL}/api/flows/handoff/`, {
+    await cookieFetch(`${API_BASE_URL}/api/flows/handoff/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversation_id: conversationId, bot_id: botId, active: newActive }),
     });
     // Always fetch handoff state from backend after toggle
-    authFetch(`${API_BASE_URL}/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
+    cookieFetch(`${API_BASE_URL}/api/flows/handoff/?conversation_id=${conversationId}&bot_id=${botId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();

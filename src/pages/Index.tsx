@@ -6,6 +6,7 @@ import Benefits from '../components/Benefits';
 import Testimonials from '../components/Testimonials';
 import Pricing from '../components/Pricing';
 import Footer from '../components/Footer';
+import CookieConsent from '../components/CookieConsent';
 import logo from '@/images/wozza.png';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -111,6 +112,7 @@ const Index = () => {
       <Testimonials />
       <Pricing />
       <Footer />
+      <CookieConsent />
       <style>{`
         .navbar-shrink nav {
           min-width: 350px !important;

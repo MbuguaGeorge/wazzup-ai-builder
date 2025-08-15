@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { authFetch } from '@/lib/authFetch';
+import { nodeFetch } from '@/lib/cookieAuth';
 import { getAccessToken } from '@/lib/auth';
 import { io, Socket } from 'socket.io-client';
 import { UserCheck } from 'lucide-react';
@@ -44,58 +44,87 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   useEffect(() => {
     if (!botId) return;
     setLoading(true);
-    authFetch(`${WEBSOCKET_URL}/api/chat/conversations/${botId}`)
+    nodeFetch(`${WEBSOCKET_URL}/api/chat/conversations/${botId}`)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
-          const conversationsWithLastMessage = await Promise.all(
-            (data.conversations || []).map(async (conv: any) => {
+          
+          // The API returns { conversations: [...], total: number }
+          const convData = data.conversations || [];
+          
+          if (!Array.isArray(convData)) {
+            setConversations([]);
+            return;
+          }
+          
+          // Fetch latest message for each conversation
+          const conversationsWithMessages = await Promise.all(
+            convData.map(async (conv: any) => {
               try {
-                // Get the last message for this conversation
-                const messagesRes = await authFetch(`${WEBSOCKET_URL}/api/chat/messages/${conv.conversation_id}`);
+                // Use conversation_id if available, otherwise fall back to id
+                const convId = conv.conversation_id || conv.id || conv._id;
+                if (!convId) {
+                  return {
+                    id: conv._id || `temp-${Date.now()}`,
+                    customerName: conv.user_id || 'Unknown',
+                    customerPhone: conv.user_id || 'Unknown',
+                    lastMessage: 'No messages',
+                    timestamp: new Date(conv.updatedAt || conv.createdAt || Date.now()).toLocaleString(),
+                    isUnread: false,
+                    status: 'active',
+                    isHandedOff: conv.handover || false,
+                    messageCount: 0,
+                    userId: conv.user_id || 'Unknown',
+                  };
+                }
+                
+                const messagesRes = await nodeFetch(`${WEBSOCKET_URL}/api/chat/messages/${convId}`);
                 if (messagesRes.ok) {
                   const messagesData = await messagesRes.json();
                   const messages = messagesData.messages || [];
-                  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+                  const latestMessage = messages.length > 0 ? messages[messages.length - 1] : null;
                   
                   return {
-                    id: conv.conversation_id,
-                    customerName: conv.user_id,
-                    customerPhone: conv.user_id,
-                    lastMessage: lastMessage ? lastMessage.content : '',
-                    timestamp: new Date(conv.updatedAt).toLocaleString(),
+                    id: convId,
+                    customerName: conv.user_id || 'Unknown',
+                    customerPhone: conv.user_id || 'Unknown',
+                    lastMessage: latestMessage ? latestMessage.content : 'No messages',
+                    timestamp: new Date(conv.updatedAt || conv.createdAt || Date.now()).toLocaleString(),
                     isUnread: false,
                     status: 'active',
-                    isHandedOff: conv.handover,
-                    messageCount: conv.messages_count || messages.length,
-                    userId: conv.user_id,
-                    messages: messages,
+                    isHandedOff: conv.handover || false,
+                    messageCount: messages.length,
+                    userId: conv.user_id || 'Unknown',
                   };
                 }
               } catch (error) {
-                console.error('Error fetching messages for conversation:', error);
+                console.error('Error fetching messages for conversation:', conv.conversation_id || conv.id, error);
               }
               
+              // Fallback conversation object
               return {
-                id: conv.conversation_id,
-                customerName: conv.user_id,
-                customerPhone: conv.user_id,
-                lastMessage: '',
-                timestamp: new Date(conv.updatedAt).toLocaleString(),
+                id: conv.conversation_id || conv.id || conv._id || `temp-${Date.now()}`,
+                customerName: conv.user_id || 'Unknown',
+                customerPhone: conv.user_id || 'Unknown',
+                lastMessage: 'Failed to load messages',
+                timestamp: new Date(conv.updatedAt || conv.createdAt || Date.now()).toLocaleString(),
                 isUnread: false,
                 status: 'active',
-                isHandedOff: conv.handover,
-                messageCount: conv.messages_count || 0,
-                userId: conv.user_id,
+                isHandedOff: conv.handover || false,
+                messageCount: 0,
+                userId: conv.user_id || 'Unknown',
               };
             })
           );
-          setConversations(conversationsWithLastMessage);
-          console.log(`📋 Loaded ${conversationsWithLastMessage.length} conversations for bot ${botId}`);
+          
+          setConversations(conversationsWithMessages as Conversation[]);
+        } else {
+          console.error('❌ Failed to fetch conversations:', res.status, res.statusText);
         }
       })
       .catch(error => {
-        console.error('Error loading conversations:', error);
+        console.error('Error fetching conversations:', error);
+        setConversations([]);
       })
       .finally(() => setLoading(false));
   }, [botId]);
@@ -176,7 +205,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
         const conversationsWithMessages = await Promise.all(
           conversations.map(async (conv) => {
             try {
-              const res = await authFetch(`${WEBSOCKET_URL}/api/chat/messages/${conv.id}`);
+              const res = await nodeFetch(`${WEBSOCKET_URL}/api/chat/messages/${conv.id}`);
               if (res.ok) {
                 const data = await res.json();
                 return { ...conv, messages: data.messages || [] };

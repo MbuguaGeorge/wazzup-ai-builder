@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Loader2, Check, XCircle, Download, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authFetch } from '@/lib/authFetch';
+import { cookieFetch } from '@/lib/cookieAuth';
 import { toast } from '@/components/ui/sonner';
 import { API_BASE_URL} from '@/lib/config';
 
@@ -111,7 +112,7 @@ const Billing = () => {
     // Refresh credit balance every 30 seconds to show real-time usage
     const creditBalanceInterval = setInterval(async () => {
       try {
-        const creditBalanceRes = await authFetch(`${API_BASE_URL}/api/subscription/credits/balance/`);
+        const creditBalanceRes = await cookieFetch(`${API_BASE_URL}/api/subscription/credits/balance/`);
         if (creditBalanceRes.ok) {
           const creditBalanceData = await creditBalanceRes.json();
           setCreditBalance(creditBalanceData);
@@ -128,20 +129,20 @@ const Billing = () => {
     try {
       setLoading(true);
       
-      const subscriptionRes = await authFetch(`${API_BASE_URL}/api/subscription/current/`);
+      const subscriptionRes = await cookieFetch(`${API_BASE_URL}/api/subscription/current/`);
       if (subscriptionRes.ok) {
         const subscriptionData = await subscriptionRes.json();
         setSubscription(subscriptionData);
       }
       
-      const plansRes = await authFetch(`${API_BASE_URL}/api/subscription/plans/`);
+      const plansRes = await cookieFetch(`${API_BASE_URL}/api/subscription/plans/`);
       if (plansRes.ok) {
         const plansData = await plansRes.json();
         setPlans(plansData);
       }
       
       // Fetch credit balance
-      const creditBalanceRes = await authFetch(`${API_BASE_URL}/api/subscription/credits/balance/`);
+      const creditBalanceRes = await cookieFetch(`${API_BASE_URL}/api/subscription/credits/balance/`);
       if (creditBalanceRes.ok) {
         const creditBalanceData = await creditBalanceRes.json();
         setCreditBalance(creditBalanceData);
@@ -156,7 +157,7 @@ const Billing = () => {
 
   const refreshCreditBalance = async () => {
     try {
-      const creditBalanceRes = await authFetch(`${API_BASE_URL}/api/subscription/credits/balance/`);
+      const creditBalanceRes = await cookieFetch(`${API_BASE_URL}/api/subscription/credits/balance/`);
       if (creditBalanceRes.ok) {
         const creditBalanceData = await creditBalanceRes.json();
         setCreditBalance(creditBalanceData);
@@ -175,7 +176,7 @@ const Billing = () => {
     
     setCanceling(true);
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/subscription/cancel/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/subscription/cancel/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cancel_at_period_end: true }),
@@ -197,7 +198,7 @@ const Billing = () => {
 
   const handleBillingPortal = async () => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/subscription/billing-portal/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/subscription/billing-portal/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -217,7 +218,7 @@ const Billing = () => {
     setUpgradingPlanId(planId);
     setUpgradeLoading(true);
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/subscription/upgrade/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/subscription/upgrade/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_id: planId, payment_method_id: paymentMethodId }),
@@ -270,7 +271,7 @@ const Billing = () => {
     setUpgradingPlanId(planId);
     setUpgradeLoading(true);
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/subscription/create/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/subscription/create/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_id: planId }),

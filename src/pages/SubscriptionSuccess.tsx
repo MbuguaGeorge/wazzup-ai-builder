@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, ArrowRight, Zap, Users, MessageSquare } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
+import { cookieFetch } from '@/lib/cookieAuth';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/lib/config';
 
@@ -39,7 +40,7 @@ const SubscriptionSuccess = () => {
 
   const fetchSubscriptionData = async () => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/subscription/current/`);
+      const response = await cookieFetch(`${API_BASE_URL}/api/subscription/current/`);
       if (response.ok) {
         const data = await response.json();
         setSubscription(data);

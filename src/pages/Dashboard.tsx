@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Search, Bot, Plus, Users, MessageSquare, BarChart2 } from 'lucide-react';
 import BotCard from '@/components/dashboard/BotCard';
 import CreateBotCard from '@/components/dashboard/CreateBotCard';
-import { authFetch } from '@/lib/authFetch';
+import { cookieFetch, nodeFetch } from '@/lib/cookieAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import BotSettingsPage from '@/pages/BotSettingsPage';
@@ -40,13 +40,13 @@ interface Bot {
 
 const fetchBots = async (setBots: React.Dispatch<React.SetStateAction<Bot[]>>) => {
   try {
-    const response = await authFetch(`${API_BASE_URL}/api/bots/`);
+    const response = await cookieFetch(`${API_BASE_URL}/api/bots/`);
     if (response.ok) {
       const data = await response.json();
       setBots(data);
     }
   } catch (err) {
-    // Handle error (already handled by authFetch for 401)
+    // Handle error (already handled by cookieFetch for 401)
   }
 };
 
@@ -71,7 +71,7 @@ const Dashboard = () => {
     fetchBots(setBots);
     async function fetchStats() {
       try {
-        const response = await authFetch(`${API_BASE_URL}/api/bots/stats/`);
+        const response = await cookieFetch(`${API_BASE_URL}/api/bots/stats/`);
         if (response.ok) {
           const data = await response.json();
           setBotStats(data);
@@ -87,7 +87,7 @@ const Dashboard = () => {
       const analytics: any = {};
       await Promise.all(bots.map(async (bot) => {
         try {
-          const res = await authFetch(`${WEBSOCKET_URL}/api/chat/stats/${bot.id}`);
+          const res = await nodeFetch(`${WEBSOCKET_URL}/api/chat/stats/${bot.id}`);
           if (res.ok) {
             analytics[bot.id] = await res.json();
           }
@@ -128,7 +128,7 @@ const Dashboard = () => {
   const handleCreateBot = async () => {
     if (!validateBotName(newBotName)) return;
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/bots/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/bots/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newBotName }),
@@ -153,7 +153,7 @@ const Dashboard = () => {
 
   const handleDeleteBot = async (id: string) => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/bots/${id}/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/bots/${id}/`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -172,7 +172,7 @@ const Dashboard = () => {
 
   const handleDuplicateBot = async (id: string) => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/bots/${id}/duplicate/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/bots/${id}/duplicate/`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -200,7 +200,7 @@ const Dashboard = () => {
   const handleRenameConfirm = async () => {
     if (!selectedBotId || !validateBotName(newBotName)) return;
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/bots/${selectedBotId}/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/bots/${selectedBotId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newBotName }),
@@ -230,7 +230,7 @@ const Dashboard = () => {
 
   const handleSetActiveFlow = async (botId: string, flowId: string) => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: true }),

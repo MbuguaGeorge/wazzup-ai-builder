@@ -5,7 +5,7 @@ import { Send, Paperclip, Smile, Image } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getAccessToken } from '@/lib/auth';
 import { io, Socket } from 'socket.io-client';
-import { authFetch } from '@/lib/authFetch';
+import { cookieFetch } from '@/lib/cookieAuth';
 import { API_BASE_URL, WEBSOCKET_URL } from '@/lib/config';
 
 interface MessageComposerProps {
@@ -62,7 +62,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ conversationId
           const parts = conversationId.split('_');
           if (parts.length >= 3) phone = parts.slice(2).join('_');
         }
-        const response = await authFetch(`${API_BASE_URL}/api/flows/send_whatsapp_message/`, {
+        const response = await cookieFetch(`${API_BASE_URL}/api/flows/send_whatsapp_message/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

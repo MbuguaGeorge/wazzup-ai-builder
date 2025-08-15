@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from "@/hooks/use-toast";
 import { Upload, CheckCircle, FileText, HelpCircle, Book, MessageSquare, Clock, AlertCircle, CheckCircle2, XCircle, MessageSquare as MessageIcon } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+import { cookieFetch } from "@/lib/cookieAuth";
 import { API_BASE_URL } from "@/lib/config";
 import SupportTicketDetail from "@/components/support/SupportTicketDetail";
 
@@ -48,7 +49,7 @@ const Support = () => {
 
   const fetchTickets = async () => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/support/tickets/`);
+      const response = await cookieFetch(`${API_BASE_URL}/api/support/tickets/`);
       if (response.ok) {
         const data = await response.json();
         setTickets(data);
@@ -115,7 +116,7 @@ const Support = () => {
         formDataToSend.append('attachments', selectedFile);
       }
 
-      const response = await authFetch(`${API_BASE_URL}/api/support/tickets/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/support/tickets/`, {
         method: 'POST',
         body: formDataToSend,
       });

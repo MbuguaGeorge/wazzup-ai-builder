@@ -35,6 +35,113 @@ const PrivacyPolicy = () => {
           <li>Cookies and Usage Data</li>
         </ul>
 
+        <h2 className="text-2xl font-bold mt-6 mb-2">Cookie Policy</h2>
+        
+        <h3 className="text-xl font-bold mt-4 mb-2">What Are Cookies</h3>
+        <p className="mb-4">
+          Cookies are small pieces of text sent by your web browser by a website you visit. A cookie file is stored in your web browser and allows the Service or a third-party to recognize you and make your next visit easier and the Service more useful to you.
+        </p>
+        
+        <h3 className="text-xl font-bold mt-4 mb-2">How We Use Cookies</h3>
+        <p className="mb-4">
+          When you use and access the Service, we may place a number of cookies files in your web browser. We use cookies for the following purposes:
+        </p>
+        
+        <h4 className="text-lg font-semibold mt-3 mb-2">1. Necessary Cookies (Always Active)</h4>
+        <p className="mb-2">
+          These cookies are essential for the proper functioning of our Service and cannot be disabled in our systems.
+        </p>
+        <ul className="list-disc list-inside mb-4 pl-4">
+          <li><strong>Authentication:</strong> To keep you logged in and secure your session</li>
+          <li><strong>Security:</strong> To protect against cross-site request forgery and other security threats</li>
+          <li><strong>Session Management:</strong> To maintain your login state and preferences during your visit</li>
+          <li><strong>Load Balancing:</strong> To distribute requests across our servers efficiently</li>
+        </ul>
+        
+        <h4 className="text-lg font-semibold mt-3 mb-2">2. Functional Cookies (Optional)</h4>
+        <p className="mb-2">
+          These cookies enable enhanced functionality and personalization features.
+        </p>
+        <ul className="list-disc list-inside mb-4 pl-4">
+          <li><strong>Language Preferences:</strong> To remember your preferred language</li>
+          <li><strong>Theme Settings:</strong> To remember your dark/light mode preference</li>
+          <li><strong>Recent Searches:</strong> To improve your search experience</li>
+          <li><strong>Form Auto-fill:</strong> To remember non-sensitive form inputs</li>
+          <li><strong>Onboarding Progress:</strong> To track your completion of tutorials and setup steps</li>
+        </ul>
+        
+        <h4 className="text-lg font-semibold mt-3 mb-2">3. Analytics Cookies (Optional)</h4>
+        <p className="mb-2">
+          These cookies help us understand how you interact with our Service so we can improve it.
+        </p>
+        <ul className="list-disc list-inside mb-4 pl-4">
+          <li><strong>Usage Analytics:</strong> To understand which features are most popular</li>
+          <li><strong>Performance Monitoring:</strong> To identify and fix performance issues</li>
+          <li><strong>Error Tracking:</strong> To detect and resolve bugs and technical issues</li>
+          <li><strong>User Journey Analysis:</strong> To optimize the user experience flow</li>
+          <li><strong>A/B Testing:</strong> To test and improve features before full release</li>
+        </ul>
+        
+        <h4 className="text-lg font-semibold mt-3 mb-2">4. Marketing Cookies (Optional)</h4>
+        <p className="mb-2">
+          These cookies are used to deliver relevant advertisements and track the effectiveness of our marketing campaigns.
+        </p>
+        <ul className="list-disc list-inside mb-4 pl-4">
+          <li><strong>Ad Personalization:</strong> To show you relevant advertisements based on your interests</li>
+          <li><strong>Conversion Tracking:</strong> To measure the effectiveness of our marketing campaigns</li>
+          <li><strong>Retargeting:</strong> To show you relevant ads on other websites</li>
+          <li><strong>Social Media Integration:</strong> To enable sharing and social login features</li>
+        </ul>
+        
+        <h3 className="text-xl font-bold mt-4 mb-2">Third-Party Cookies</h3>
+        <p className="mb-4">
+          In addition to our own cookies, we may also use various third-party cookies to report usage statistics of the Service and deliver advertisements on and through the Service.
+        </p>
+        <ul className="list-disc list-inside mb-4">
+          <li><strong>Google Analytics:</strong> For website analytics and performance monitoring</li>
+          <li><strong>Stripe:</strong> For secure payment processing</li>
+          <li><strong>Google OAuth:</strong> For secure authentication via Google accounts</li>
+          <li><strong>Social Media Platforms:</strong> For sharing and social login functionality</li>
+        </ul>
+        
+        <h3 className="text-xl font-bold mt-4 mb-2">Managing Your Cookie Preferences</h3>
+        <p className="mb-4">
+          You have several options to manage cookies:
+        </p>
+        <ul className="list-disc list-inside mb-4">
+          <li><strong>Cookie Banner:</strong> When you first visit our site, you can choose which types of cookies to accept</li>
+          <li><strong>Browser Settings:</strong> You can configure your browser to refuse all cookies or indicate when a cookie is being sent</li>
+          <li><strong>Opt-out Tools:</strong> You can use browser extensions and tools to manage tracking cookies</li>
+          <li><strong>Contact Us:</strong> You can contact us at privacy@wozza.io to discuss your cookie preferences</li>
+        </ul>
+        
+        <h3 className="text-xl font-bold mt-4 mb-2">Cookie Retention</h3>
+        <p className="mb-4">
+          Different cookies have different retention periods:
+        </p>
+        <ul className="list-disc list-inside mb-4">
+          <li><strong>Session Cookies:</strong> Deleted when you close your browser</li>
+          <li><strong>Functional Cookies:</strong> Stored for up to 1 year</li>
+          <li><strong>Analytics Cookies:</strong> Stored for up to 2 years</li>
+          <li><strong>Marketing Cookies:</strong> Stored for up to 2 years</li>
+        </ul>
+        
+        <h3 className="text-xl font-bold mt-4 mb-2">Impact of Disabling Cookies</h3>
+        <p className="mb-4">
+          If you disable cookies, some features of our Service may not function properly:
+        </p>
+        <ul className="list-disc list-inside mb-4">
+          <li>You may need to log in repeatedly</li>
+          <li>Your preferences and settings may not be saved</li>
+          <li>Some personalization features may not work</li>
+          <li>We may not be able to remember your cookie preferences</li>
+        </ul>
+        
+        <h3 className="text-xl font-bold mt-4 mb-2">Updates to This Cookie Policy</h3>
+        <p className="mb-4">
+          We may update this Cookie Policy from time to time. When we do, we will notify you by updating the "Last updated" date at the top of this policy. We encourage you to review this policy periodically to stay informed about how we use cookies.
+        </p>
+
         <p className="mb-4">
           <strong>Usage Data:</strong> We may also collect information that your browser sends whenever you visit our Service or when you access the Service by or through a mobile device ("Usage Data"). This Usage Data may include information such as your computer's Internet Protocol address (e.g. IP address), browser type, browser version, the pages of our Service that you visit, the time and date of your visit, the time spent on those pages, unique device identifiers and other diagnostic data.
         </p>

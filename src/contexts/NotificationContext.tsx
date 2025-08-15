@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { authFetch } from '@/lib/authFetch';
+import { cookieFetch } from '@/lib/cookieAuth';
 import { API_BASE_URL, WEBSOCKET_URL } from '@/lib/config';
 import { io, Socket } from 'socket.io-client';
 import { jwtDecode } from 'jwt-decode';
@@ -84,7 +85,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     
     setLoading(true);
     try {
-      const res = await authFetch(`${API_BASE_URL}/api/notifications/?page_size=50`);
+      const res = await cookieFetch(`${API_BASE_URL}/api/notifications/?page_size=50`);
       if (res.ok) {
         const data = await res.json();
         const sorted = [...data.results].sort((a: Notification, b: Notification) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -106,7 +107,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (!userId) return;
     
     try {
-      const res = await authFetch(`${API_BASE_URL}/api/notifications/${id}/read/`, {
+      const res = await cookieFetch(`${API_BASE_URL}/api/notifications/${id}/read/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_read: true })
@@ -129,7 +130,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (!userId) return;
     
     try {
-      const res = await authFetch(`${API_BASE_URL}/api/notifications/mark-all-read/`, {
+      const res = await cookieFetch(`${API_BASE_URL}/api/notifications/mark-all-read/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -223,6 +224,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (!userId) {
       // Disconnect socket when user logs out
       if (socketRef.current) {
+        console.log('🔌 Disconnecting socket due to no userId');
         socketRef.current.disconnect();
         socketRef.current = null;
       }
@@ -230,11 +232,18 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
     
     if (!socketRef.current) {
+      // Check for both JWT token and session authentication
       const token = localStorage.getItem('token');
-      if (!token) return;
+      const authMethod = localStorage.getItem('auth_method');
+      
+      // Only connect if we have authentication
+      if (!token && authMethod !== 'session') {
+        console.log('🔌 No authentication found, skipping socket connection');
+        return;
+      }
       
       const socket: Socket = io(`${WEBSOCKET_URL}`, {
-        auth: { token },
+        auth: { token: token || 'session' }, // Use token or 'session' for cookie auth
         transports: ['websocket', 'polling'],
         timeout: 20000,
         forceNew: true
@@ -247,6 +256,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       
       socket.on('connect_error', (error) => {
         console.error('❌ Socket connection error:', error);
+        // If auth error, disconnect socket
+        if (error.message && error.message.includes('auth')) {
+          console.log('🔌 Authentication error, disconnecting socket');
+          socket.disconnect();
+        }
       });
       
       socket.on('disconnect', (reason) => {
@@ -284,6 +298,26 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       }
     };
   }, [userId]);
+
+  // Listen for logout events to disconnect socket
+  useEffect(() => {
+    const handleLogout = () => {
+      console.log('🔌 Logout event received, disconnecting socket');
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      // Clear notifications
+      setNotifications([]);
+      setUnreadCount(0);
+    };
+
+    window.addEventListener('auth:logout', handleLogout);
+    
+    return () => {
+      window.removeEventListener('auth:logout', handleLogout);
+    };
+  }, []);
 
   const value: NotificationContextType = {
     notifications,

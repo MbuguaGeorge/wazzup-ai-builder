@@ -9,33 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Brain, UploadCloud, FileText, Link as LinkIcon, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import DeleteButton from './DeleteButton';
 import { useEffect } from 'react';
-import { authFetch } from '@/lib/authFetch';
+import { cookieFetch } from '@/lib/cookieAuth';
 import { API_BASE_URL } from '@/lib/config';
-
-
-const useBroadcastChannel = (channelName: string) => {
-  const [message, setMessage] = useState(null);
-  const channel = useRef(null);
-  
-  useEffect(() => {
-    channel.current = new BroadcastChannel(channelName);
-    
-    channel.current.addEventListener('message', (event) => {
-      setMessage(event.data);
-    });
-    
-    return () => {
-      channel.current?.close();
-    };
-  }, [channelName]);
-  
-  const sendMessage = useCallback((data) => {
-    channel.current?.postMessage(data);
-  }, []);
-  
-  return { message, sendMessage };
-};
-
 
 const AINode = ({ data, isConnectable, id }: NodeProps) => {
   const [newLink, setNewLink] = useState('');
@@ -50,7 +25,6 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
     };
   } | null>(null);
   const popupRef = React.useRef<Window | null>(null);
-  const { message, sendMessage } = useBroadcastChannel('google-oauth');
   const onUpdate = data.onUpdate || (() => {});
   const onFilesChange = data.onFilesChange || (() => {});
   const onFileRemove = data.onFileRemove || (() => {});
@@ -59,7 +33,7 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
   useEffect(() => {
     async function fetchTrialStatus() {
       try {
-        const response = await authFetch(`${API_BASE_URL}/api/subscription/credits/balance/`);
+        const response = await cookieFetch(`${API_BASE_URL}/api/subscription/credits/balance/`);
         if (response.ok) {
           const data = await response.json();
           setTrialStatus({
@@ -83,72 +57,46 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
   }, []);
 
   // Reusable function to check Google OAuth status
-  const checkGoogleStatus = async () => {
+  const checkGoogleStatus = useCallback(async (retryCount = 0) => {
     try {
-      console.log('🔍 Checking Google OAuth status...');
-      const res = await authFetch(`${API_BASE_URL}/api/google-oauth/status/`);
+      const res = await cookieFetch(`${API_BASE_URL}/api/google-oauth/status/`);
+      
+      if (!res.ok) {
+        if (res.status === 401 && retryCount < 2) {
+          setTimeout(() => checkGoogleStatus(retryCount + 1), 1500);
+          return false;
+        }
+        setGoogleAuth(false);
+        return false;
+      }
+      
       const result = await res.json();
-      console.log('✅ Google OAuth status response:', result);
-      setGoogleAuth(!!result.authorized);
-      console.log('🔧 Updated googleAuth state to:', !!result.authorized);
-      return result.authorized;
+      const isAuthorized = !!result.authorized;
+      setGoogleAuth(isAuthorized);
+      return isAuthorized;
     } catch (e) {
-      console.error('❌ Error checking Google OAuth status:', e);
+      if (retryCount < 2) {
+        setTimeout(() => checkGoogleStatus(retryCount + 1), 1500);
+        return false;
+      }
       setGoogleAuth(false);
       return false;
     }
-  };
+  }, []);
 
   // Check Google OAuth status on component mount
   useEffect(() => {
     checkGoogleStatus();
-  }, []);
-
-  // Listen for OAuth popup message
-  useEffect(() => {
-    if (message) {
-      if (message.type === 'google_oauth_success') {
-        console.log('🎉 OAuth success message received (prop)');
-        // Instead of directly setting state, check the actual backend status
-        checkGoogleStatus();
-        setAuthError(null);
-        if (popupRef.current) popupRef.current.close();
-      } else if (message.type === 'google_oauth_error') {
-        console.log('❌ OAuth error message received (prop)');
-        setAuthError('Google authorization failed. Please try again.');
-        setGoogleAuth(false);
-        if (popupRef.current) popupRef.current.close();
-      }
-    }
-  }, [message]);
-
-  useEffect(() => {
-    function handleMessage(event: MessageEvent) {
-      if (event.data && event.data.type === 'google_oauth_success') {
-        console.log('🎉 OAuth success message received (window event):', event.data);
-        // Instead of directly setting state, check the actual backend status
-        checkGoogleStatus();
-        setAuthError(null);
-        if (popupRef.current) popupRef.current.close();
-      } else if (event.data && event.data.type === 'google_oauth_error') {
-        console.log('❌ OAuth error message received (window event):', event.data);
-        setAuthError('Google authorization failed. Please try again.');
-        setGoogleAuth(false);
-        if (popupRef.current) popupRef.current.close();
-      }
-    }
-    
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, [checkGoogleStatus]);
 
   const handleGoogleAuth = async () => {
     setAuthChecking(true);
     setAuthError(null);
     try {
-      const res = await authFetch(`${API_BASE_URL}/api/google-oauth/url/`);
+      const res = await cookieFetch(`${API_BASE_URL}/api/google-oauth/url/`);
       const data = await res.json();
       if (!data.url) throw new Error('No OAuth URL returned');
+
       const width = 500, height = 600;
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
@@ -159,9 +107,16 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
       );
 
       popupRef.current = popup;
+
+      const pollTimer = setInterval(() => {
+        if (popupRef.current && popupRef.current.closed) {
+          clearInterval(pollTimer);
+          setAuthChecking(false);
+          checkGoogleStatus();
+        }
+      }, 500);
     } catch (e) {
       setAuthError('Failed to initiate Google OAuth.');
-    } finally {
       setAuthChecking(false);
     }
   };
@@ -172,13 +127,12 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
       onUpdate({ gdrive_links: updatedLinks });
       setNewLink('');
 
-      await authFetch(`${API_BASE_URL}/api/upsert-gdrive-link/`, {
+      await cookieFetch(`${API_BASE_URL}/api/upsert-gdrive-link/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ link: newLink, flow_id: data.flow_id, node_id: id }),
         credentials: 'include'
       });
-      console.log(`Adding link: ${newLink} to flow ID: ${data.flow_id}`);
     }
   };
 
@@ -186,13 +140,12 @@ const AINode = ({ data, isConnectable, id }: NodeProps) => {
     const updatedLinks = data.gdrive_links?.filter((link: string) => link !== linkToRemove);
     onUpdate({ gdrive_links: updatedLinks });
 
-    await authFetch(`${API_BASE_URL}/api/delete-gdrive-link/`, {
+    await cookieFetch(`${API_BASE_URL}/api/delete-gdrive-link/`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ link: linkToRemove, flow_id: data.flow_id, node_id: id }),
       credentials: 'include'
     });
-    console.log(`Removing link: ${linkToRemove} from flow ID: ${data.flow_id}`);
   };
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {

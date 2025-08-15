@@ -53,8 +53,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useParams } from 'react-router-dom';
-import { authFetch } from '@/lib/authFetch';
-import { clearTokens } from '@/lib/auth';
+import { cookieFetch, cookieAuth } from '@/lib/cookieAuth';
 import { toast } from '@/components/ui/sonner';
 import { useBeforeUnload } from 'react-router-dom';
 import { toast as useToast } from "@/components/ui/use-toast";
@@ -116,7 +115,7 @@ const FlowBuilder = () => {
     async function fetchFlows() {
       if (!botId) return;
       try {
-        const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
+        const response = await cookieFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
         if (response.ok) {
           const data = await response.json();
           setFlows(data);
@@ -126,79 +125,59 @@ const FlowBuilder = () => {
           }
         }
       } catch (err) {
-        // If authFetch fails, it will redirect to login automatically
         console.error('Failed to fetch flows:', err);
-        // Show user-friendly message and force redirect
         toast.error('Session expired. Redirecting to login...');
-        
-        // Force redirect to login as backup
-        setTimeout(() => {
-          window.location.replace('/login');
-        }, 1000);
       }
       setIsLoading(false);
     }
     fetchFlows();
   }, [botId]);
 
-  // Immediate token validation on page load
+  // Simple session validation on page load
   useEffect(() => {
-    const validateTokenOnLoad = async () => {
+    const validateSession = async () => {
       setIsValidatingToken(true);
       try {
-        if (botId) {
-          // Make a lightweight API call to validate token immediately
-          const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
-          if (!response.ok) {
-            // If this fails, authFetch will handle redirect to login
-            throw new Error('Token validation failed');
-          }
+        const authStatus = await cookieAuth.isAuthenticated();
+        if (!authStatus.authenticated) {
+          console.log('No valid session found, redirecting to login...');
+          await cookieAuth.logout();
+          window.location.href = '/login';
         }
       } catch (error) {
-        // authFetch will handle token refresh or redirect to login
-        console.log('Token validation on load completed');
-        
-        // Backup redirect mechanism
-        setTimeout(() => {
-          if (window.location.pathname !== '/login') {
-            window.location.replace('/login');
-          }
-        }, 1500);
+        console.error('Session validation failed:', error);
+        window.location.href = '/login';
       } finally {
         setIsValidatingToken(false);
       }
     };
 
-    validateTokenOnLoad();
+    validateSession();
   }, [botId]);
 
-  // Periodic token check to ensure tokens are refreshed even when idle
+  // Periodic session refresh (much simpler than before)
   useEffect(() => {
-    const tokenCheckInterval = setInterval(async () => {
+    const refreshInterval = setInterval(async () => {
       try {
-        // Make a lightweight API call to check token validity
-        if (botId) {
-          await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
-        }
+        await cookieAuth.refreshSession();
       } catch (error) {
-        // authFetch will handle token refresh or redirect to login
-        console.log('Token check completed');
+        console.log('Session refresh failed, user may need to re-login');
       }
-    }, 2 * 60 * 1000); // Check every 2 minutes (more frequent)
+    }, 5 * 60 * 1000); // Refresh every 5 minutes
 
-    return () => clearInterval(tokenCheckInterval);
+    return () => clearInterval(refreshInterval);
   }, [botId]);
 
-  // Check token when user returns to the tab
+  // Session check when user returns to the tab
   useEffect(() => {
     const handleFocus = async () => {
       try {
-        if (botId) {
-          await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
+        const authStatus = await cookieAuth.isAuthenticated();
+        if (!authStatus.authenticated) {
+          window.location.href = '/login';
         }
       } catch (error) {
-        // authFetch will handle token refresh or redirect to login
-        console.log('Token check on focus completed');
+        console.log('Session check on focus failed');
       }
     };
 
@@ -206,106 +185,19 @@ const FlowBuilder = () => {
     return () => window.removeEventListener('focus', handleFocus);
   }, [botId]);
 
-  // Token validation on user activity (mouse move, click, keypress)
-  useEffect(() => {
-    let activityTimeout: NodeJS.Timeout;
-    
-    const handleUserActivity = () => {
-      // Clear existing timeout
-      clearTimeout(activityTimeout);
-      
-      // Set new timeout to validate token after user stops being active
-      activityTimeout = setTimeout(async () => {
-        try {
-          if (botId) {
-            await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
-          }
-        } catch (error) {
-          // authFetch will handle token refresh or redirect to login
-          console.log('Token check on user activity completed');
-        }
-      }, 30000); // 30 seconds after user stops being active
-    };
-
-    // Listen for user activity
-    const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
-    events.forEach(event => {
-      document.addEventListener(event, handleUserActivity, { passive: true });
-    });
-
-    return () => {
-      clearTimeout(activityTimeout);
-      events.forEach(event => {
-        document.removeEventListener(event, handleUserActivity);
-      });
-    };
-  }, [botId]);
-
-  // Token validation function for critical operations
-  const validateToken = async () => {
+  // Simple session validation function for critical operations
+  const validateSession = async () => {
     try {
-      if (botId) {
-        await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`);
-        return true;
-      }
-      return false;
+      const authStatus = await cookieAuth.isAuthenticated();
+      return authStatus.authenticated;
     } catch (error) {
-      // authFetch will handle token refresh or redirect to login
+      console.error('Session validation error:', error);
       return false;
     }
   };
 
-  // Force redirect mechanism for expired tokens
-  useEffect(() => {
-    let redirectAttempts = 0;
-    const maxRedirectAttempts = 3;
-    
-    const attemptRedirect = () => {
-      if (redirectAttempts >= maxRedirectAttempts || isRedirecting) {
-        // Stop trying to redirect after 3 attempts or if already redirecting
-        console.log('Max redirect attempts reached or already redirecting, stopping redirect loop');
-        return;
-      }
-      
-      redirectAttempts++;
-      setIsRedirecting(true);
-      
-      // Check if we're still on FlowBuilder but should be redirected
-      if (window.location.pathname.includes('/flow-builder') || window.location.pathname.includes('/bot/')) {
-        // Check if we have valid tokens
-        const token = localStorage.getItem('token');
-        if (!token) {
-          // No token, force redirect
-          console.log('No token found, redirecting to login...');
-          window.location.replace('/login');
-          return;
-        }
-        
-        // Only check token once, not continuously
-        fetch(`${API_BASE_URL}/api/bots/${botId}/flows/`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).then(response => {
-          if (response.status === 401) {
-            // Token expired, force redirect
-            console.log('Token expired, redirecting to login...');
-            clearTokens();
-            window.location.replace('/login');
-          }
-        }).catch(() => {
-          // API call failed, force redirect
-          console.log('API call failed, redirecting to login...');
-          window.location.replace('/login');
-        });
-      }
-    };
-    
-    // Only check once after a delay, not continuously
-    const redirectTimeout = setTimeout(attemptRedirect, 10000); // Check after 10 seconds
-    
-    return () => {
-      clearTimeout(redirectTimeout);
-    };
-  }, [botId, isRedirecting]);
+  // Remove the complex redirect mechanism - cookies handle this automatically
+  // The old useEffect with redirectAttempts and maxRedirectAttempts is no longer needed
 
   useEffect(() => {
     if (selectedFlow && !isEqual(initialFlowData, { nodes, edges })) {
@@ -339,7 +231,7 @@ const FlowBuilder = () => {
   }, [setNodes]);
 
   const refetchSingleFlow = async (flowId: string) => {
-    const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`);
+    const response = await cookieFetch(`${API_BASE_URL}/api/flows/${flowId}/`);
     if (response.ok) {
       const updatedFlow = await response.json();
       setFlows(flows.map(f => f.id === flowId ? updatedFlow : f));
@@ -351,7 +243,7 @@ const FlowBuilder = () => {
     if (!selectedFlow) return;
 
     // Validate token before uploading
-    const tokenValid = await validateToken();
+    const tokenValid = await validateSession();
     if (!tokenValid) {
       if (!isRedirecting) {
         setIsRedirecting(true);
@@ -385,7 +277,7 @@ const FlowBuilder = () => {
     formData.append('node_id', nodeId);
 
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/flows/${selectedFlow.id}/upload/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/flows/${selectedFlow.id}/upload/`, {
         method: 'POST',
         body: formData,
       });
@@ -423,7 +315,7 @@ const FlowBuilder = () => {
     if (!selectedFlow) return;
 
     // Validate token before removing
-    const tokenValid = await validateToken();
+    const tokenValid = await validateSession();
     if (!tokenValid) {
       if (!isRedirecting) {
         setIsRedirecting(true);
@@ -450,7 +342,7 @@ const FlowBuilder = () => {
     try {
       if (fileToRemove.id.startsWith('temp-')) return; // It's not on the server yet
 
-      const response = await authFetch(`${API_BASE_URL}/api/flows/${selectedFlow.id}/files/${fileToRemove.id}/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/flows/${selectedFlow.id}/files/${fileToRemove.id}/`, {
         method: 'DELETE',
       });
 
@@ -715,7 +607,7 @@ const FlowBuilder = () => {
     if (!validateFlowName(newFlowName) || !botId) return;
     
     // Validate token before creating
-    const tokenValid = await validateToken();
+    const tokenValid = await validateSession();
     if (!tokenValid) {
       if (!isRedirecting) {
         setIsRedirecting(true);
@@ -729,7 +621,7 @@ const FlowBuilder = () => {
     }
     
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/bots/${botId}/flows/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newFlowName, flow_data: { nodes: [], edges: [] } }),
@@ -762,7 +654,7 @@ const FlowBuilder = () => {
     }
     
     // Validate token before updating
-    const tokenValid = await validateToken();
+    const tokenValid = await validateSession();
     if (!tokenValid) {
       if (!isRedirecting) {
         setIsRedirecting(true);
@@ -776,7 +668,7 @@ const FlowBuilder = () => {
     }
     
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -798,7 +690,7 @@ const FlowBuilder = () => {
 
   const handleDeleteFlow = async (flowId: string) => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -819,7 +711,7 @@ const FlowBuilder = () => {
   const handleSetActive = async (flowId: string) => {
     if (!botId) return;
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/flows/${flowId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: true }),
@@ -883,7 +775,7 @@ const FlowBuilder = () => {
     if (!selectedFlow || !canEdit) return;
     
     // Validate token before saving
-    const tokenValid = await validateToken();
+    const tokenValid = await validateSession();
     if (!tokenValid) {
       if (!isRedirecting) {
         setIsRedirecting(true);

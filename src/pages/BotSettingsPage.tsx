@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { authFetch } from '@/lib/authFetch';
+import { cookieFetch } from '@/lib/cookieAuth';
 import { API_BASE_URL } from '@/lib/config';
 
 interface BotSettingsPageProps {
@@ -61,7 +62,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
     setError(null);
     try {
       // Fetch bot details
-      const botRes = await authFetch(`${API_BASE_URL}/api/bots/${botId}/`);
+      const botRes = await cookieFetch(`${API_BASE_URL}/api/bots/${botId}/`);
       if (botRes.ok) {
         const bot = await botRes.json();
         setIsConnected(!!bot.whatsapp_connected);
@@ -70,7 +71,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
         // Optionally set other bot fields here
         if (bot.whatsapp_connected) {
           // Fetch WABA details
-          const wabaRes = await authFetch(`${API_BASE_URL}/api/bots/${botId}/waba/`);
+          const wabaRes = await cookieFetch(`${API_BASE_URL}/api/bots/${botId}/waba/`);
           if (wabaRes.ok) {
             const waba = await wabaRes.json();
             setConnectionData({
@@ -104,7 +105,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
     setPollingConnection(true);
     const interval = setInterval(async () => {
       try {
-        const botRes = await authFetch(`${API_BASE_URL}/api/bots/${botId}/`);
+        const botRes = await cookieFetch(`${API_BASE_URL}/api/bots/${botId}/`);
         if (botRes.ok) {
           const bot = await botRes.json();
           if (bot.whatsapp_connected) {
@@ -137,7 +138,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
     setConnecting(true);
     setError(null);
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/meta/generate-signup-url/${botId}/`);
+      const response = await cookieFetch(`${API_BASE_URL}/api/meta/generate-signup-url/${botId}/`);
       const data = await response.json();
 
       if (data.signup_url) {
@@ -157,7 +158,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
 
   const handleDisconnectWhatsApp = async () => {
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/toggle-whatsapp/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/bots/${botId}/toggle-whatsapp/`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -183,7 +184,7 @@ const BotSettingsPage: React.FC<BotSettingsPageProps> = ({ botId, onClose, onBot
     setSavingBotName(true);
     setError(null);
     try {
-      const response = await authFetch(`${API_BASE_URL}/api/bots/${botId}/`, {
+      const response = await cookieFetch(`${API_BASE_URL}/api/bots/${botId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: botName }),

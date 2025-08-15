@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { cookieAuth } from "@/lib/cookieAuth";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -22,15 +23,68 @@ import ProfileSettings from "./pages/ProfileSettings";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import SubscriptionError from "./pages/SubscriptionError";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { useState, useEffect } from "react";
 
 const queryClient = new QueryClient();
 
+// Debug component to track location changes
+function LocationTracker() {
+  const location = useLocation();
+  
+  return null;
+}
+
 function isAuthenticated() {
-  return Boolean(localStorage.getItem('token'));
+  // Check for JWT token (fallback authentication)
+  const token = localStorage.getItem('token');
+  if (token) {
+    return true;
+  }
+  
+  // Check for session-based authentication
+  const authMethod = localStorage.getItem('auth_method');
+  const user = localStorage.getItem('user');
+  
+  if (authMethod === 'session' && user) {
+    return true;
+  }
+  
+  return false;
 }
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  return isAuthenticated() ? <>{children}</> : <Navigate to="/login" />;
+  const [isAuth, setIsAuth] = useState<boolean | null>(null);
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      // First do quick local check
+      if (isAuthenticated()) {
+        setIsAuth(true);
+        return;
+      }
+      
+      // If no local auth found, check with server for session-based auth
+      try {
+        const authStatus = await cookieAuth.isAuthenticated();
+        setIsAuth(authStatus.authenticated);
+      } catch (error) {
+        setIsAuth(false);
+      }
+    };
+    
+    checkAuth();
+  }, []);
+  
+  // Show loading while checking authentication
+  if (isAuth === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  return isAuth ? <>{children}</> : <Navigate to="/login" />;
 }
 
 const App = () => (
@@ -40,6 +94,7 @@ const App = () => (
       <Sonner />
       <NotificationProvider>
       <Router>
+        <LocationTracker />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
