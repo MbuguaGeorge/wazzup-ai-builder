@@ -12,8 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, Settings, User, LifeBuoy, Bell, CheckCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationDropdown from './NotificationDropdown';
-import { authFetch } from '@/lib/authFetch';
-import { cookieFetch } from '@/lib/cookieAuth';
+import { cookieAuth } from '@/lib/cookieAuth';
 import { API_BASE_URL } from '@/lib/config';
 
 interface DashboardHeaderProps {
@@ -42,7 +41,7 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await cookieFetch(`${API_BASE_URL}/api/me/`);
+        const res = await cookieAuth.fetchMe();
         if (res.ok) {
           const userData = await res.json();
           setUser({
@@ -83,11 +82,18 @@ const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
     fetchUser();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refresh');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    try {
+      // Use proper cookieAuth logout function
+      await cookieAuth.logout();
+      
+      // Navigate to login page
     navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Force logout if regular logout fails
+      await cookieAuth.forceLogout();
+    }
   };
 
   const handleSupportClick = () => {

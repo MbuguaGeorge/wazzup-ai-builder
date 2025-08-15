@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { authFetch } from '@/lib/authFetch';
-import { cookieFetch } from '@/lib/cookieAuth';
+import { cookieFetch, cookieAuth } from '@/lib/cookieAuth';
 import { API_BASE_URL, WEBSOCKET_URL } from '@/lib/config';
 import { io, Socket } from 'socket.io-client';
 import { jwtDecode } from 'jwt-decode';
@@ -42,6 +42,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
+  const [authMethod, setAuthMethod] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   // Helper: sort and deduplicate notifications
@@ -153,11 +154,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     await fetchNotifications();
   }, [fetchNotifications, userId]);
 
-  // Listen for authentication changes
+  // Listen for authentication changes and token refresh events
   useEffect(() => {
     const checkAuth = () => {
       const newUserId = getUserIdFromToken();
+      const currentAuthMethod = localStorage.getItem('auth_method');
       setUserId(newUserId);
+      setAuthMethod(currentAuthMethod);
     };
 
     // Check on mount
@@ -165,7 +168,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
     // Listen for storage changes (login/logout)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'token') {
+      if (e.key === 'token' || e.key === 'auth_method') {
         checkAuth();
       }
     };
@@ -175,26 +178,62 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       checkAuth();
     };
 
+    // Listen for session refresh events (Issue 1 fix)
+    const handleSessionRefresh = async () => {
+      console.log('🔄 Session refreshed, updating socket authentication...');
+      const currentAuthMethod = localStorage.getItem('auth_method');
+      
+      if (currentAuthMethod === 'session' && socketRef.current) {
+        // For session users, regenerate JWT token for socket
+        try {
+          const response = await cookieFetch(`${API_BASE_URL}/api/session/to-jwt/`, {
+            method: 'POST',
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('refresh', data.refresh);
+            
+            // Reconnect socket with new token
+            if (socketRef.current) {
+              console.log('🔌 Reconnecting socket with refreshed token...');
+              socketRef.current.disconnect();
+              socketRef.current = null;
+              // Socket will be recreated by the useEffect below
+            }
+          }
+        } catch (error) {
+          console.error('❌ Failed to refresh JWT token for socket:', error);
+        }
+      }
+    };
+
     // Poll for token changes (fallback)
     const pollInterval = setInterval(() => {
       const currentToken = localStorage.getItem('token');
       const currentUserId = getUserIdFromToken();
-      if (currentUserId !== userId) {
+      const currentAuthMethod = localStorage.getItem('auth_method');
+      
+      if (currentUserId !== userId || currentAuthMethod !== authMethod) {
         setUserId(currentUserId);
+        setAuthMethod(currentAuthMethod);
       }
     }, 1000);
 
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('login', handleAuthChange);
     window.addEventListener('logout', handleAuthChange);
+    window.addEventListener('session:refresh', handleSessionRefresh);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('login', handleAuthChange);
       window.removeEventListener('logout', handleAuthChange);
+      window.removeEventListener('session:refresh', handleSessionRefresh);
       clearInterval(pollInterval);
     };
-  }, [getUserIdFromToken, userId]);
+  }, [getUserIdFromToken, userId, authMethod]);
 
   // Fetch notifications when userId changes (login/logout)
   useEffect(() => {
@@ -207,6 +246,32 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       setLoading(false);
     }
   }, [userId, fetchNotifications]);
+
+  // Periodic authentication check to detect expired sessions
+  useEffect(() => {
+    const checkAuthPeriodically = async () => {
+      if (userId) {
+        try {
+          const authStatus = await cookieAuth.isAuthenticated();
+          if (!authStatus.authenticated) {
+            console.log('🔐 User no longer authenticated, logging out...');
+            await cookieAuth.forceLogout();
+          } else {
+            // Auto-refresh session if expiring soon
+            await cookieAuth.autoRefreshSession();
+          }
+        } catch (error) {
+          console.error('Periodic auth check failed:', error);
+          await cookieAuth.forceLogout();
+        }
+      }
+    };
+
+    // Check every 2 minutes
+    const interval = setInterval(checkAuthPeriodically, 120000);
+    
+    return () => clearInterval(interval);
+  }, [userId]);
 
   // Refetch on tab focus - only if authenticated
   useEffect(() => {
@@ -234,10 +299,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (!socketRef.current) {
       // Check for both JWT token and session authentication
       const token = localStorage.getItem('token');
-      const authMethod = localStorage.getItem('auth_method');
+      const currentAuthMethod = localStorage.getItem('auth_method');
       
       // Only connect if we have authentication
-      if (!token && authMethod !== 'session') {
+      if (!token && currentAuthMethod !== 'session') {
         console.log('🔌 No authentication found, skipping socket connection');
         return;
       }
@@ -250,7 +315,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       });
       
       socket.on('connect', () => {
-        console.log('🔌 Socket connected');
+        console.log('🔌 Socket connected with auth method:', currentAuthMethod);
         socket.emit('join', `user_${userId}`);
       });
       
@@ -297,7 +362,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         socketRef.current = null;
       }
     };
-  }, [userId]);
+  }, [userId, authMethod]); // Added authMethod as dependency
 
   // Listen for logout events to disconnect socket
   useEffect(() => {

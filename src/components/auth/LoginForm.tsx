@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Lock } from 'lucide-react';
-import { cookieAuth } from '@/lib/cookieAuth';
+import { cookieAuth, areCookiesEnabled, isCookieConsentGiven } from '@/lib/cookieAuth';
 import { setTokens } from '@/lib/auth'; // Keep for fallback JWT support
+import { toast } from 'react-toastify';
+import { useSearchParams } from 'react-router-dom';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -14,53 +16,51 @@ const LoginForm = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError('');
     
     try {
-      // Use cookie-based authentication
-      const data = await cookieAuth.login(email, password, true);
+      // Check if cookies are accepted - if not, inform user about JWT fallback
+      const cookiesAccepted = areCookiesEnabled() && isCookieConsentGiven();
       
-      // Store user data in localStorage for quick access
-      if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
+      if (!cookiesAccepted) {
+        console.log('🍪 Cookies not accepted, will use JWT authentication');
+        // Optionally show a message to user about authentication method
       }
       
-      // Handle both authentication methods
+      const data = await cookieAuth.login(email, password, cookiesAccepted);
+      
+      // Store user data and auth method
+          localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('auth_method', data.authentication_method);
+      
+      // Clear any old JWT tokens if using cookie auth
       if (data.authentication_method === 'session') {
-        // Clear any old JWT tokens since we're using cookies now
         localStorage.removeItem('token');
         localStorage.removeItem('refresh');
-      } else if (data.authentication_method === 'jwt') {
-        // Store JWT tokens for fallback
-        if (data.token && data.refresh) {
-          setTokens(data.token, data.refresh);
-        }
       }
+
+      // Dispatch login event
+      window.dispatchEvent(new CustomEvent('login', { detail: data }));
       
-      // Small delay to ensure all data is stored before navigation
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 100);
+      // Show success message with auth method info
+      const authMethodMsg = data.authentication_method === 'session' 
+        ? 'Logged in with secure session' 
+        : 'Logged in with token authentication';
       
-    } catch (err: any) {
-      // Handle specific error messages from the backend
-      const errorMessage = err.message;
+      toast.success(authMethodMsg);
       
-      if (errorMessage.includes('verification code')) {
-        setError('Please check your email for the verification code to complete your registration.');
-      } else if (errorMessage.includes('No account found')) {
-        setError('No account found with this email address. Please check your email or sign up for a new account.');
-      } else if (errorMessage.includes('Invalid email or password')) {
-        setError('Invalid email or password. Please check your credentials and try again.');
-      } else if (errorMessage.includes('scheduled for deletion')) {
-        setError('Your account is scheduled for deletion. Please contact support if you need to restore it.');
-      } else {
-        setError(errorMessage || 'Login failed. Please check your credentials and try again.');
-      }
+      // Redirect to dashboard or intended page
+      const redirectTo = searchParams.get('redirect') || '/dashboard';
+      navigate(redirectTo);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError(error.message || 'Login failed. Please try again.');
+      toast.error(error.message || 'Login failed');
     } finally {
       setLoading(false);
     }
