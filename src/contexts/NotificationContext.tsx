@@ -25,12 +25,26 @@ interface NotificationContextType {
   refreshAll: () => Promise<void>;
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+// Create context with a meaningful default value
+const defaultContextValue: NotificationContextType = {
+  notifications: [],
+  unreadCount: 0,
+  loading: false,
+  markAsRead: async () => {},
+  markAllAsRead: async () => {},
+  refreshAll: async () => {},
+};
 
-export const useNotificationContext = () => {
-  const ctx = useContext(NotificationContext);
-  if (!ctx) throw new Error('useNotificationContext must be used within NotificationProvider');
-  return ctx;
+// Export the context itself
+export const NotificationContext = createContext<NotificationContextType>(defaultContextValue);
+
+// Export the hook as a named constant
+export const useNotificationContext = /* @__PURE__ */ () => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error('useNotificationContext must be used within NotificationProvider');
+  }
+  return context;
 };
 
 interface NotificationProviderProps {
